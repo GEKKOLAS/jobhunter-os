@@ -7,7 +7,7 @@ typecheck and build pass, both themes are checked, and this file's status column
 |-------|-------|--------|
 | 0 | Foundation | Done (2026-10-31) |
 | 1 | Identity | Done (2026-10-31) |
-| 2 | Profile & evidence (F1) | — |
+| 2 | Profile & evidence (F1) | Done (2026-10-31) |
 | 3 | Opportunities: capture, board, history (F2) | — |
 | 4 | Imports: text, URL, job-board sources (F2) | — |
 | 5 | Matching (F3) | — |
@@ -44,7 +44,7 @@ endpoint, CSRF and rate limiting.
 
 ## Phase 2 — Profile & evidence
 
-Profile, skills (with the skill dictionary and alias normalization) and evidence; `/profile`
+Profile, skills (with the skill catalog and alias normalization) and evidence; `/profile`
 page with skill chips, level/years editors and evidence cards.
 
 ## Phase 3 — Opportunities
@@ -62,7 +62,7 @@ Lever / Ashby clients with WireMock fixtures, "Add from a company board" flow, d
 
 ## Phase 5 — Matching
 
-Skill dictionary families, rule-based extractor, Anthropic extractor behind the port,
+Catalog families in scoring, rule-based extractor, Anthropic extractor behind the port,
 requirements editor, algorithm v1 with exhaustive unit tests, fit panel on the
 opportunity page and score chips on the board.
 

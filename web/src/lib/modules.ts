@@ -15,8 +15,8 @@ import {
 export const PHASES = [
   { phase: 0, title: "Foundation", status: "done" },
   { phase: 1, title: "Identity", status: "done" },
-  { phase: 2, title: "Profile & evidence", status: "next" },
-  { phase: 3, title: "Opportunities: capture, board, history", status: "planned" },
+  { phase: 2, title: "Profile & evidence", status: "done" },
+  { phase: 3, title: "Opportunities: capture, board, history", status: "next" },
   { phase: 4, title: "Imports: text, URL, job boards", status: "planned" },
   { phase: 5, title: "Matching", status: "planned" },
   { phase: 6, title: "Contacts", status: "planned" },

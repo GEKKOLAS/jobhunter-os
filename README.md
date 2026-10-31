@@ -8,9 +8,10 @@ It is phase 2 of a career toolkit. Phase 1, **Outreach Studio**
 ([Mail Template Hub](https://github.com/GEKKOLAS/smtp)), builds and sends email. JobHunter OS
 calls its API to send follow-ups, and only after you approve each one.
 
-> **Status: phases 0–1 done.** The foundation and accounts work end to end: sign-up, sign-in,
-> sessions you can see and revoke, password reset, and a security activity log. The features
-> above arrive in phases 2–9; see the [implementation plan](docs/spec/04-implementation-plan.md).
+> **Status: phases 0–2 done.** Accounts work end to end (sign-up, sign-in, sessions you can see
+> and revoke, password reset, a security activity log), and so does F1: your profile, skills
+> from a 128-entry catalog that folds aliases (`C#` = `csharp`), and the evidence behind them.
+> The rest arrives in phases 3–9; see the [implementation plan](docs/spec/04-implementation-plan.md).
 
 ## What it will do
 

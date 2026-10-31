@@ -3,6 +3,8 @@ using JobHunter.Application.Common;
 using JobHunter.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace JobHunter.Api.Middleware;
 
@@ -23,6 +25,12 @@ internal sealed class GlobalExceptionHandler(
             NotFoundException notFound => (StatusCodes.Status404NotFound, notFound.Message, notFound.Code),
             UnauthorizedAppException unauthorized => (StatusCodes.Status401Unauthorized, unauthorized.Message, unauthorized.Code),
             ConflictException conflict => (StatusCodes.Status409Conflict, conflict.Message, conflict.Code),
+            // A client's version no longer matches the row (spec 03, conventions).
+            DbUpdateConcurrencyException => (StatusCodes.Status409Conflict,
+                "This was changed elsewhere. Reload and try again.", "concurrency.conflict"),
+            // A unique index caught a race the use case's own check couldn't see.
+            DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } } =>
+                (StatusCodes.Status409Conflict, "That already exists.", "conflict.duplicate"),
             UpstreamUnavailableException upstream => (StatusCodes.Status502BadGateway, upstream.Message, upstream.Code),
             // Remaining use-case failures are input the server understood but can't act on.
             AppException app => (StatusCodes.Status422UnprocessableEntity, app.Message, app.Code),

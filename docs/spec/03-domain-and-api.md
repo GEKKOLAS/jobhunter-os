@@ -36,29 +36,48 @@ Ported from Mail Template Hub phase 1: `users`, `user_sessions`, `password_reset
 ## Profile (F1)
 
 `profiles` (1:1 with user): `headline` ≤ 120, `summary` ≤ 2,000, `location` ≤ 120,
-`target_roles text[]` (≤ 10), `seniority` (`junior|mid|senior|lead|principal`),
-`work_modes text[]` (`remote|hybrid|onsite`), `languages jsonb` (`[{ code, level }]`).
+`target_roles text[]` (≤ 10, each ≤ 80), `seniority?` (`junior|mid|senior|lead|principal`),
+`work_modes text[]` (`remote|hybrid|onsite`), `languages jsonb`
+(`[{ name ≤ 40, level }]`, ≤ 10, level `basic|conversational|professional|native`).
 
-`profile_skills`: `name` ≤ 60, `key` (normalized: lowercased, aliases folded, e.g.
-`c#`/`csharp` → `csharp`, unique per user), `category`
-(`language|framework|data|cloud|tooling|practice|domain|soft`), `level` 1–5, `years`
-0–40 (one decimal), `last_used_year?`.
+`profile_skills` (≤ 150 per user): `name` ≤ 60, `key` (unique per user, see below),
+`category` (`language|framework|data|cloud|tooling|practice|domain|soft`), `level` 1–5,
+`years` 0–40 (one decimal), `last_used_year?` (1970–this year).
 
-`evidence_items`: `kind` (`project|role|certification|education`), `title` ≤ 120,
-`organization?`, `start_date?`, `end_date?`, `description` ≤ 4,000, `outcome?` ≤ 1,000
-(the user's own words; never generated), `links jsonb` (`[{ label, url }]`, https only),
-`skill_ids uuid[]`.
+`evidence_items` (≤ 100 per user): `kind` (`project|role|certification|education`),
+`title` ≤ 120, `organization?` ≤ 120, `start_date?`, `end_date?` (not before the start;
+empty means ongoing), `description` ≤ 4,000, `outcome?` ≤ 1,000 (the user's own words;
+never generated), `links jsonb` (≤ 5 × `{ label ≤ 60, url }`, https only),
+`skill_ids uuid[]` (the user's own skills only, else 422 `evidence.unknown_skill`).
+
+**Skill keys and the catalog.** A skill's key is its name in a compact form: lowercase,
+`#` → `sharp`, `+` → `plus`, everything else that isn't a letter or digit dropped
+(`ASP.NET Core` → `aspnetcore`). The compact form is then looked up in the **skill
+catalog**, a curated list of known skills with their aliases, category and family, so
+`C#`, `csharp` and `C Sharp` are the same skill and `.NET Core` folds into `dotnet`.
+Unknown skills keep their compact form as key. The catalog belongs to Profile; Matching
+(phase 5) uses it through `JobHunter.Application.Profile.Contracts.ISkillCatalog`, and
+the families are what "related skill" means there.
+
+**Evidence count.** Every skill reports how many evidence items cite it. A skill with
+none shows "no evidence yet". That isn't an error: it's a reminder that claims
+should be backed by evidence (PRD principle 2).
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET / PUT | `/profile` | Created empty on first GET |
-| GET / POST | `/profile/skills` | Duplicate key → 409 `skill.duplicate` |
-| PUT / DELETE | `/profile/skills/{id}` | Delete also unlinks evidence |
-| GET / POST | `/profile/evidence` | |
-| PUT / DELETE | `/profile/evidence/{id}` | |
-| GET | `/skills/dictionary?q=` | Known skills and aliases, for autocomplete |
+| GET / PUT | `/profile` | Created empty on first GET; PUT carries `version` |
+| GET / POST | `/profile/skills` | Duplicate key → 409 `skill.duplicate`; `category` may be omitted for catalog skills; limit → 409 `profile.limit` |
+| PUT / DELETE | `/profile/skills/{id}` | PUT carries `version`; delete also unlinks evidence |
+| GET / POST | `/profile/evidence` | Newest first by start date; limit → 409 `profile.limit` |
+| PUT / DELETE | `/profile/evidence/{id}` | PUT carries `version` |
+| GET | `/skills/catalog?q=&limit=` | Catalog matches for autocomplete: exact, then prefix, then contains |
 
-Events: `ProfileChanged` (skills or seniority changed). Audit: `profile.updated`.
+Rows edited in place carry `version` (PostgreSQL `xmin`); a PUT with a stale version →
+409 `concurrency.conflict`.
+
+Audit: `profile.updated`, `skill.created|updated|deleted`, `evidence.created|updated|deleted`.
+Events: `ProfileChanged` (skills or seniority changed), raised from phase 7 when the outbox
+exists; until then Matching compares the profile's `updated_at` with the assessment's.
 
 ## Opportunities (F2)
 
@@ -132,7 +151,7 @@ unconfirmed rows only.
   scored (shown as "not scored").
 - Coverage per requirement: **1** when the profile has the skill with level ≥ 3 and years ≥
   `years_min` (if any); **0.5** when the skill is present but under the level or years, or
-  when only a related skill from the same dictionary family is present; **0** otherwise.
+  when only a related skill from the same catalog family is present; **0** otherwise.
 - `score = round(100 × Σ weight × coverage ÷ Σ weight)`; no scored requirements → no
   score ("not enough information").
 - Bands: ≥ 75 strong, ≥ 55 good, ≥ 35 partial, below weak.

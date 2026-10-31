@@ -16,6 +16,10 @@ public sealed class UnauthorizedAppException(string code, string message)
 public class ConflictException(string code, string message)
     : AppException(code, message);
 
+/// <summary>Well-formed input that refers to something it can't (another user's skill, say) — 422.</summary>
+public sealed class InvalidInputException(string code, string message)
+    : AppException(code, message);
+
 /// <summary>An upstream service (AI, job board, Outreach Studio) failed for a reason the user can't fix — 502.</summary>
 public sealed class UpstreamUnavailableException(string code, string message)
     : AppException(code, message);

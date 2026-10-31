@@ -42,9 +42,9 @@ Each module owns a namespace in every layer (`JobHunter.Domain.Opportunities`,
 | Module | Owns | Feature |
 |--------|------|---------|
 | `Identity` | users, sessions, password reset, audit log | — |
-| `Profile` | profile, skills, evidence items | F1 |
+| `Profile` | profile, skills, evidence items, skill catalog | F1 |
 | `Opportunities` | companies, opportunities, stage history, job sources | F2 |
-| `Matching` | requirements, fit assessments, skill dictionary | F3 |
+| `Matching` | requirements, fit assessments | F3 |
 | `Contacts` | contacts, interactions | F4 |
 | `FollowUps` | reminders, drafts, notifications | F5 |
 | `Analytics` | read models only (no tables of its own in v1) | F6, F7 |
@@ -118,7 +118,7 @@ configuration (`Ai:Model`, `Ai:FastModel`).
 
 | Port | Used for | Without an API key |
 |------|----------|--------------------|
-| `IRequirementExtractor` | Posting text → requirements (must/nice, skill, years) | `RuleBasedRequirementExtractor`: skill dictionary + "N+ years" patterns, labelled `rules` |
+| `IRequirementExtractor` | Posting text → requirements (must/nice, skill, years) | `RuleBasedRequirementExtractor`: skill catalog + "N+ years" patterns, labelled `rules` |
 | `IPostingParser` | Imported page text → title, company, location, description | Heuristics from the page `<title>` and `JobPosting` JSON-LD when present |
 | `IDraftWriter` | Follow-up / thank-you drafts from facts the user selected | Unavailable; the UI offers a blank draft (a fake draft is worse than none) |
 

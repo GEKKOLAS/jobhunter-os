@@ -41,6 +41,20 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public TestSession NewSession() => new(CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false }));
 
+    /// <summary>A brand-new user, signed in.</summary>
+    public async Task<TestSession> SignedInAsync(string displayName = "Ada Lovelace")
+    {
+        var session = NewSession();
+        var response = await session.PostAsync("/api/v1/auth/register", new
+        {
+            email = $"user-{Guid.NewGuid():N}@example.com",
+            password = "correct horse battery staple",
+            displayName,
+        });
+        response.EnsureSuccessStatusCode();
+        return session;
+    }
+
     async Task IAsyncLifetime.InitializeAsync() => await _postgres.StartAsync();
 
     async Task IAsyncLifetime.DisposeAsync()
