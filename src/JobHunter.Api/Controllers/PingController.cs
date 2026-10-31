@@ -1,10 +1,12 @@
 using JobHunter.Application.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobHunter.Api.Controllers;
 
 /// <summary>Liveness for the web app's status indicator; `/healthz` is the database-aware check.</summary>
 [ApiController]
+[AllowAnonymous]
 [Route("api/v1/ping")]
 public sealed class PingController(IClock clock) : ControllerBase
 {

@@ -1,23 +1,30 @@
 "use client";
 
 import { LogoMark } from "@/components/app/logo-mark";
+import { UserAvatar } from "@/components/app/user-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { findModule, isActivePath } from "@/lib/modules";
+import type { User } from "@/lib/schemas/auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // The phone shell (below `lg`): a slim top bar and four thumb-reachable tabs for what you
 // do on the move: check today, move a card, answer a reminder, fix your profile.
-// The dashboard lists every other area.
+// The dashboard lists every other area; the avatar opens Settings (and sign-out).
 const TABS = ["dashboard", "board", "follow-ups", "profile"].map((slug) => findModule(slug)!);
 
-export function MobileTopBar() {
+export function MobileTopBar({ user }: { user: User }) {
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-background/85 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 backdrop-blur-xl lg:hidden">
       <Link href="/dashboard">
         <LogoMark />
       </Link>
-      <ThemeToggle className="size-9" />
+      <div className="flex items-center gap-2">
+        <ThemeToggle className="size-9" />
+        <Link href="/settings" aria-label={`Settings for ${user.displayName}`} className="rounded-full">
+          <UserAvatar name={user.displayName} />
+        </Link>
+      </div>
     </header>
   );
 }

@@ -2,7 +2,7 @@ import { ApiStatus } from "@/components/app/api-status";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MODULES, PHASES, type PhaseStatus } from "@/lib/modules";
+import { currentPhase, MODULES, PHASES, type PhaseStatus } from "@/lib/modules";
 import { LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 
@@ -19,7 +19,7 @@ export default function DashboardPage() {
     <div className="mx-auto flex max-w-5xl flex-col gap-8">
       <PageHeader
         icon={LayoutDashboard}
-        eyebrow="Phase 0 · Foundation"
+        eyebrow={`Phase ${currentPhase().phase} · ${currentPhase().title}`}
         title="JobHunter OS"
         description="The operations center for your job search. Here is what gets built, in order."
       />

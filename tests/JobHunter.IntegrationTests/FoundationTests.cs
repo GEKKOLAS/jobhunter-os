@@ -46,15 +46,24 @@ public class FoundationTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Unknown_routes_answer_with_problem_details()
+    public async Task Unknown_routes_are_401_when_anonymous_and_404_when_signed_in()
     {
-        using var client = factory.CreateClient();
+        // The sign-in-by-default policy also covers requests that match no route, so
+        // anonymous callers can't probe which routes exist.
+        var anonymous = await factory.NewSession().GetAsync("/api/v1/does-not-exist");
 
-        var response = await client.GetAsync("/api/v1/does-not-exist");
+        var session = factory.NewSession();
+        await session.PostAsync("/api/v1/auth/register",
+            new { email = $"user-{Guid.NewGuid():N}@example.com", password = "correct horse battery staple", displayName = "Ada" });
+        var signedIn = await session.GetAsync("/api/v1/does-not-exist");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(404, problem.GetProperty("status").GetInt32());
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, signedIn.StatusCode);
+        foreach (var response in new[] { anonymous, signedIn })
+        {
+            Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+            var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal((int)response.StatusCode, problem.GetProperty("status").GetInt32());
+        }
     }
 }

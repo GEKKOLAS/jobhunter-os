@@ -4,23 +4,42 @@ import { AppNav } from "@/components/app/app-nav";
 import { GradientBackdrop } from "@/components/app/gradient-backdrop";
 import { MobileTabBar, MobileTopBar } from "@/components/app/mobile-shell";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { useSession } from "@/lib/hooks/use-session";
 import { isActivePath, MODULES } from "@/lib/modules";
-import { usePathname } from "next/navigation";
+import { loginPathFor } from "@/lib/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-// No session guard yet: accounts arrive in phase 1 (docs/spec/04-implementation-plan.md).
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
+  const { data: user, isLoading } = useSession();
+
+  // Signed out (or the session expired): sign in, then come back here.
+  useEffect(() => {
+    if (!isLoading && user === null) router.replace(loginPathFor(pathname));
+  }, [isLoading, user, router, pathname]);
+
+  if (isLoading || !user) {
+    return (
+      <div className="flex min-h-full flex-1 items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
   const activeLabel = MODULES.find((m) => isActivePath(pathname, m.slug))?.label;
+  const firstName = user.displayName.trim().split(/\s+/)[0] || "Your";
 
   return (
     <div className="relative flex min-h-full flex-1">
       <GradientBackdrop />
-      <AppNav />
+      <AppNav user={user} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <MobileTopBar />
+        <MobileTopBar user={user} />
         <header className="hidden h-14 shrink-0 items-center justify-between gap-4 border-b-2 bg-background/80 px-8 backdrop-blur-xl lg:flex dark:border-b">
           <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
-            <span className="truncate">Your search</span>
+            <span className="truncate">{firstName}&apos;s search</span>
             {activeLabel && (
               <>
                 <span aria-hidden>/</span>

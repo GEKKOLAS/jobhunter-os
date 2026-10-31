@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findModule, isActivePath, MODULE_GROUPS, MODULES, PHASES, phaseOf } from "@/lib/modules";
+import { currentPhase, findModule, isActivePath, MODULE_GROUPS, MODULES, PHASES, phaseOf } from "@/lib/modules";
 
 describe("module catalogue", () => {
   it("has unique, URL-safe slugs", () => {
@@ -15,9 +15,12 @@ describe("module catalogue", () => {
     }
   });
 
-  it("numbers the phases 0..n with exactly one next phase", () => {
+  it("numbers the phases 0..n with exactly one next phase, right after the done ones", () => {
     expect(PHASES.map((p) => p.phase)).toEqual(PHASES.map((_, i) => i));
-    expect(PHASES.filter((p) => p.status === "next")).toHaveLength(1);
+    const next = PHASES.filter((p) => p.status === "next");
+    expect(next).toHaveLength(1);
+    expect(next[0].phase).toBe(currentPhase().phase + 1);
+    expect(PHASES.slice(0, next[0].phase).every((p) => p.status === "done")).toBe(true);
   });
 });
 

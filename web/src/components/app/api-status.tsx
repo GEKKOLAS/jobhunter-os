@@ -1,13 +1,14 @@
 "use client";
 
 import { ping } from "@/lib/api/ping";
+import { queryKeys } from "@/lib/query/query-keys";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 
 /** Whether the web app can reach the API through its `/api` proxy. Rechecks every 30 s. */
 export function ApiStatus({ className }: { className?: string }) {
   const { isPending, isError } = useQuery({
-    queryKey: ["ping"],
+    queryKey: queryKeys.ping,
     queryFn: ping,
     refetchInterval: 30_000,
     retry: false,

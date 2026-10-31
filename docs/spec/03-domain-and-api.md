@@ -19,6 +19,20 @@ Ported from Mail Template Hub phase 1: `users`, `user_sessions`, `password_reset
 | GET / PATCH | `/me` · POST `/me/password` | |
 | GET | `/audit-logs` | Own events only |
 
+- **Signed in by default.** Every endpoint requires a session unless it is marked anonymous
+  (register, login, password reset, ping, health). The rule also covers requests that
+  match no route: they answer 401 to anonymous callers and 404 only once signed in.
+- **Cookies.** `jh_session` (`__Host-jh_session` in production, `Secure`) and `jh_csrf`.
+  Browsers share cookies across ports of one host, so these names must differ from Mail
+  Template Hub's `mth_*` for both apps to run on `localhost`.
+- **Registering a taken email** returns the same body as a real sign-up, but no session.
+  Without email verification the missing session cookie still tells the caller the
+  address exists; the `auth` rate limit (10 per 15 min per IP) bounds that probing. Email
+  verification arrives with transactional email.
+- **Sign-in redirect.** The web app follows `?next=` only for paths on its own origin
+  (`//host` and `/\host` are rejected), so a crafted sign-in link can't send the user
+  elsewhere.
+
 ## Profile (F1)
 
 `profiles` (1:1 with user): `headline` ≤ 120, `summary` ≤ 2,000, `location` ≤ 120,

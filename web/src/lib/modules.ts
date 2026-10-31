@@ -14,8 +14,8 @@ import {
 /** The phases of docs/spec/04-implementation-plan.md; keep the two in step. */
 export const PHASES = [
   { phase: 0, title: "Foundation", status: "done" },
-  { phase: 1, title: "Identity", status: "next" },
-  { phase: 2, title: "Profile & evidence", status: "planned" },
+  { phase: 1, title: "Identity", status: "done" },
+  { phase: 2, title: "Profile & evidence", status: "next" },
   { phase: 3, title: "Opportunities: capture, board, history", status: "planned" },
   { phase: 4, title: "Imports: text, URL, job boards", status: "planned" },
   { phase: 5, title: "Matching", status: "planned" },
@@ -124,6 +124,11 @@ export function findModule(slug: string) {
 
 export function phaseOf(phase: number) {
   return PHASES.find((p) => p.phase === phase);
+}
+
+/** The most recent finished phase: where the app stands today. */
+export function currentPhase() {
+  return PHASES.filter((p) => p.status === "done").at(-1) ?? PHASES[0];
 }
 
 export function isActivePath(pathname: string, slug: string) {

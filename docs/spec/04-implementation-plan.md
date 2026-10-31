@@ -6,7 +6,7 @@ typecheck and build pass, both themes are checked, and this file's status column
 | Phase | Scope | Status |
 |-------|-------|--------|
 | 0 | Foundation | Done (2026-10-31) |
-| 1 | Identity | — |
+| 1 | Identity | Done (2026-10-31) |
 | 2 | Profile & evidence (F1) | — |
 | 3 | Opportunities: capture, board, history (F2) | — |
 | 4 | Imports: text, URL, job-board sources (F2) | — |

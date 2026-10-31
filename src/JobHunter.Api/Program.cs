@@ -1,7 +1,14 @@
+using System.Threading.RateLimiting;
+using JobHunter.Api;
+using JobHunter.Api.Auth;
+using JobHunter.Api.Logging;
 using JobHunter.Api.Middleware;
 using JobHunter.Application;
+using JobHunter.Application.Common;
 using JobHunter.Infrastructure;
 using JobHunter.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Resources;
@@ -11,7 +18,9 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, loggerConfiguration) =>
-    loggerConfiguration.ReadFrom.Configuration(context.Configuration));
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.With<SecretScrubbingEnricher>());
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -22,6 +31,44 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database");
+
+// --- Identity: cookie sessions + CSRF (spec 02 §5) ---
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<HttpCurrentUser>();
+builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<HttpCurrentUser>());
+builder.Services.AddScoped<IRequestContext>(sp => sp.GetRequiredService<HttpCurrentUser>());
+builder.Services.AddSingleton<AuthCookies>();
+
+builder.Services
+    .AddAuthentication(SessionAuthentication.Scheme)
+    .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(SessionAuthentication.Scheme, null);
+
+// Secure by default: an endpoint is anonymous only when it says [AllowAnonymous].
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder(SessionAuthentication.Scheme).RequireAuthenticatedUser().Build());
+
+// --- Rate limits per client IP; resolved per request so configuration overrides apply ---
+builder.Services.AddOptions<RateLimitingOptions>().BindConfiguration(RateLimitingOptions.SectionName);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    static RateLimitPartition<string> Fixed(
+        HttpContext context, Func<RateLimitingOptions, RateLimitingOptions.PolicyOptions> select)
+    {
+        var policy = select(context.RequestServices.GetRequiredService<IOptionsMonitor<RateLimitingOptions>>().CurrentValue);
+        return RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = policy.PermitLimit,
+                Window = TimeSpan.FromMinutes(policy.WindowMinutes),
+                QueueLimit = 0,
+            });
+    }
+
+    options.AddPolicy("auth", context => Fixed(context, o => o.Auth));
+});
 
 var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
 builder.Services.AddOpenTelemetry()
@@ -40,17 +87,21 @@ builder.Services.AddOpenTelemetry()
 var app = builder.Build();
 
 app.UseExceptionHandler();
-// Bodiless errors (unknown routes, 405s) still answer with ProblemDetails.
+// Bodiless errors (unknown routes, 401/403 challenges, 405s, 429s) still answer with ProblemDetails.
 app.UseStatusCodePages();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseSerilogRequestLogging();
+app.UseRateLimiter();
+app.UseAuthentication();
+app.UseMiddleware<CsrfMiddleware>();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
 }
 
-app.MapHealthChecks("/healthz");
+app.MapHealthChecks("/healthz").AllowAnonymous();
 app.MapControllers();
 
 // Development and test startup gate; production applies migrations in the deploy pipeline.

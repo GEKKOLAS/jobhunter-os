@@ -34,10 +34,22 @@ export class ApiError extends Error {
   }
 }
 
+// Cookies are scoped by host, not port, so this must not be Mail Template Hub's
+// `mth_csrf` when both run on localhost (src/JobHunter.Application/Identity/AuthOptions.cs).
+const CSRF_COOKIE = "jh_csrf";
+
 function getCsrfToken(): string {
   if (typeof document === "undefined") return "";
-  const match = document.cookie.match(/(?:^|;\s*)mth_csrf=([^;]*)/);
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : "";
+}
+
+/**
+ * True once the API has issued a session (it sets the CSRF cookie alongside it).
+ * Registering a taken email answers like a real sign-up but issues no session.
+ */
+export function hasSessionCookies(): boolean {
+  return getCsrfToken() !== "";
 }
 
 type RequestOptions<T> = Omit<RequestInit, "body"> & {

@@ -2,13 +2,18 @@
 
 import { ApiStatus } from "@/components/app/api-status";
 import { LogoMark } from "@/components/app/logo-mark";
+import { UserAvatar } from "@/components/app/user-avatar";
+import { useSignOut } from "@/lib/hooks/use-sign-out";
 import { isActivePath, MODULE_GROUPS, MODULES } from "@/lib/modules";
+import type { User } from "@/lib/schemas/auth";
+import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /** The desktop sidebar (`lg` and up), built from the module catalogue. */
-export function AppNav() {
+export function AppNav({ user }: { user: User }) {
   const pathname = usePathname();
+  const signOut = useSignOut();
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col gap-5 border-r border-sidebar-border bg-sidebar px-3 py-4 text-sidebar-foreground lg:flex">
@@ -45,9 +50,24 @@ export function AppNav() {
         ))}
       </nav>
 
-      <div className="flex flex-col gap-1 border-t border-sidebar-border px-3 pt-3">
-        <ApiStatus />
-        <p className="text-xs text-sidebar-foreground/55">Phase 0 · sign-in arrives in phase 1</p>
+      <ApiStatus className="px-3 text-sidebar-foreground/65" />
+
+      <div className="flex items-center gap-2.5 border-t border-sidebar-border px-1 pt-3">
+        <UserAvatar name={user.displayName} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{user.displayName}</p>
+          <p className="truncate text-xs text-sidebar-foreground/60">{user.email}</p>
+        </div>
+        <button
+          type="button"
+          aria-label="Sign out"
+          title="Sign out"
+          onClick={() => signOut.mutate()}
+          disabled={signOut.isPending}
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-50"
+        >
+          <LogOut className="size-4" />
+        </button>
       </div>
     </aside>
   );

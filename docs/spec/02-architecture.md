@@ -62,6 +62,11 @@ can't slip past the rule. The shared kernel (`JobHunter.Domain.Common`,
 `JobHunter.Application.Common`) holds only cross-cutting types: ids, clock, current user,
 errors, paging.
 
+**One database port per module.** There is one `AppDbContext`, but handlers never see it:
+each module declares its own narrow port (`IIdentityDbContext` with the Identity tables
+only, and so on), and the context implements them all. A handler in one module therefore
+can't even name another module's tables.
+
 **Why namespaces and not one project per module:** the boundary is what matters and the
 test enforces it; a project per module per layer would mean ~30 projects for one developer.
 If a module is ever extracted into a service, its `Contracts` become the API.

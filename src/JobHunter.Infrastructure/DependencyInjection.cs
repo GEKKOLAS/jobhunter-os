@@ -1,5 +1,8 @@
 using JobHunter.Application.Common;
+using JobHunter.Application.Identity;
+using JobHunter.Infrastructure.Identity;
 using JobHunter.Infrastructure.Persistence;
+using JobHunter.Infrastructure.Persistence.Interceptors;
 using JobHunter.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -18,15 +21,36 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddSingleton<IClock, SystemClock>();
+        services.AddSingleton<TimestampInterceptor>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
             var database = sp.GetRequiredService<IOptions<DatabaseOptions>>().Value;
             options
                 .UseNpgsql(database.ConnectionString)
-                .UseSnakeCaseNamingConvention();
+                .UseSnakeCaseNamingConvention()
+                .AddInterceptors(sp.GetRequiredService<TimestampInterceptor>());
         });
 
+        AddIdentity(services, configuration);
+
         return services;
+    }
+
+    private static void AddIdentity(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.SectionName);
+        services.AddScoped<IIdentityDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
+        services.AddScoped<IAuditWriter, AuditWriter>();
+
+        if (configuration.GetValue<bool>($"{AuthOptions.SectionName}:{nameof(AuthOptions.LogPasswordResetLinks)}"))
+        {
+            services.AddSingleton<IPasswordResetNotifier, LoggingPasswordResetNotifier>();
+        }
+        else
+        {
+            services.AddSingleton<IPasswordResetNotifier, UnconfiguredPasswordResetNotifier>();
+        }
     }
 }
