@@ -23,7 +23,7 @@ public sealed class AuditLogsHandler(IIdentityDbContext db, ICurrentUser current
 
         var total = await q.CountAsync(ct);
         var rows = await q
-            .OrderByDescending(a => a.CreatedAt)
+            .OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id) // ids are UUIDv7: time-ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);

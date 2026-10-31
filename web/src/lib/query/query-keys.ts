@@ -7,4 +7,11 @@ export const queryKeys = {
   skills: ["profile-skills"] as const,
   evidence: ["profile-evidence"] as const,
   catalog: (q: string) => ["skill-catalog", q] as const,
+  board: ["board"] as const,
+  /** Every list; invalidate this prefix after any change to an opportunity. */
+  opportunities: ["opportunities"] as const,
+  opportunityList: (filters: object) => ["opportunities", "list", filters] as const,
+  opportunity: (id: string) => ["opportunities", "detail", id] as const,
+  history: (id: string) => ["opportunities", "history", id] as const,
+  companies: ["companies"] as const,
 };

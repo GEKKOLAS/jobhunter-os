@@ -1,5 +1,6 @@
 using JobHunter.Application.Common;
 using JobHunter.Application.Identity;
+using JobHunter.Application.Opportunities;
 using JobHunter.Application.Profile;
 using JobHunter.Infrastructure.Identity;
 using JobHunter.Infrastructure.Persistence;
@@ -35,6 +36,7 @@ public static class DependencyInjection
 
         AddIdentity(services, configuration);
         services.AddScoped<IProfileDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IOpportunitiesDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         return services;
     }

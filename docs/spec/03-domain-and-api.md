@@ -81,37 +81,51 @@ exists; until then Matching compares the profile's `updated_at` with the assessm
 
 ## Opportunities (F2)
 
-`companies`: `name` ≤ 120, `website?`, `domain?` (normalized, unique per user when set),
-`notes?`.
+`companies`: `name` ≤ 120 (citext, unique per user, so "Contoso" and "contoso" are one
+company), `website?` (https/http URL), `domain?` (the website's host, lowercased, `www.`
+dropped; unique per user when set), `notes?` ≤ 2,000.
 
 `opportunities`:
 
 | Column | Notes |
 |--------|-------|
-| company_id | Created on the fly from a name when unknown |
-| title ≤ 160, location? ≤ 120, work_mode?, employment_type? | `full_time|part_time|contract|internship` |
-| salary_min?, salary_max?, salary_currency?, salary_period? | Only as stated in the posting |
+| company_id | `companyId`, or `companyName` matched case-insensitively and created when unknown |
+| title ≤ 160, location? ≤ 120, work_mode?, employment_type? | `remote|hybrid|onsite`; `full_time|part_time|contract|internship` |
+| salary_min?, salary_max?, salary_currency?, salary_period? | Whole units, min ≤ max; ISO 4217 code; `year|month|hour`. Only as stated in the posting |
 | source | `manual|paste|url|greenhouse|lever|ashby` |
 | source_url?, source_ref? | Unique (user_id, source, source_ref) when ref is set — re-importing updates instead of duplicating |
-| description | Plain text ≤ 50,000 |
-| stage | See below |
-| priority | `low|normal|high`; `priority_set_by` `user|suggested` |
-| applied_at?, first_response_at?, closed_at?, close_reason? | Set by stage transitions and events |
-| archived_at? | Soft delete |
+| description | Plain text ≤ 50,000, shown as text, never as HTML |
+| stage, previous_stage? | See below; `previous_stage` is where the last move came from |
+| priority | `low|normal|high` (default `normal`); `priority_set_by` `user|suggested`, null until set |
+| applied_at?, first_response_at?, closed_at? | Set by stage moves (below) and, from phase 6, by inbound interactions |
+| archived_at? | Soft delete; archived opportunities leave the board and default lists |
 
-Stages and allowed moves:
+**Stages.** Open: `saved → preparing → applied → screening → interviewing → offer`.
+Closed: `accepted`, `declined`, `rejected`, `withdrawn`, `no_response`.
 
 ```
 saved ──▶ preparing ──▶ applied ──▶ screening ──▶ interviewing ──▶ offer ──▶ accepted
-  │           │            │            │              │             └──▶ declined
-  └───────────┴────────────┴────────────┴──────────────┴──▶ rejected | withdrawn | no_response
+  │           │            │            │              │             ├──▶ declined
+  └───────────┴────────────┴────────────┴──────────────┴─────────────┴──▶ rejected | withdrawn
+                           └────────────┴──────────────┴──▶ no_response
 ```
 
-Moving forward may skip stages (e.g. `saved → applied`); moving back is allowed one step
-for corrections. `applied_at` is set on the first move to `applied` or later;
-`first_response_at` on the first move to `screening` or later, or by an inbound
-interaction. Closed stages set `closed_at`. Every move writes
-`opportunity_stage_changes (from, to, at, note?)` and raises `OpportunityStageChanged`.
+| From | Allowed moves |
+|------|---------------|
+| An open stage | Any later open stage (skipping is fine: `saved → applied`); the open stage just before it (a correction); `rejected` or `withdrawn` |
+| `applied`, `screening`, `interviewing` | Also `no_response` |
+| `offer` | Also `accepted` or `declined` |
+| A closed stage | Only back to `previous_stage` (undoing the close) |
+
+Anything else → 409 `opportunity.invalid_stage`, naming the allowed moves.
+
+**Timestamps.** `applied_at`: the first move to `applied` or any later open stage, or to
+`accepted`/`declined`. `first_response_at`: the first move to `screening` or later, or to
+`rejected` from `applied` onwards (a rejection is an answer); never for `no_response`.
+`closed_at`: set on every close, cleared when undone. Neither of the first two is cleared
+by a correction, since the event happened. Every move writes
+`opportunity_stage_changes (from, to, at, note? ≤ 500)`. `OpportunityStageChanged` is
+raised from phase 7, when the outbox exists.
 
 `job_sources`: `provider` (`greenhouse|lever|ashby`), `board` (the company's board token),
 `label`, `last_checked_at?`. Listing a source's postings is **read-only**: the user picks
@@ -121,10 +135,11 @@ which postings to save. Postings already saved are flagged.
 |--------|------|-------|
 | GET | `/opportunities?stage&priority&q&archived&page&pageSize` | |
 | POST | `/opportunities` | Manual or from a preview below |
-| GET / PUT / DELETE | `/opportunities/{id}` | DELETE archives |
+| GET / PUT / DELETE | `/opportunities/{id}` | PUT carries `version` and edits everything but the stage; DELETE archives |
+| POST | `/opportunities/{id}/restore` | Undoes an archive |
 | POST | `/opportunities/{id}/stage` | `{ stage, note? }`; illegal move → 409 `opportunity.invalid_stage` |
-| GET | `/opportunities/{id}/history` | Stage changes |
-| GET | `/board` | Open opportunities grouped by stage, ordered by priority then age |
+| GET | `/opportunities/{id}/history` | Stage changes, oldest first |
+| GET | `/board` | One column per open stage: opportunities by priority (high first) then oldest first; plus counts of closed ones by stage |
 | POST | `/imports/text` | `{ text }` → preview (parsed fields, not saved) |
 | POST | `/imports/url` | `{ url }` → preview; rate limit `import`; SSRF rules in spec 02 §5; failures → 422 `import.unreachable` / `import.unsupported` |
 | GET / POST | `/sources` · DELETE `/sources/{id}` | |
@@ -132,8 +147,8 @@ which postings to save. Postings already saved are flagged.
 | POST | `/sources/{id}/postings/{ref}/save` | Saves one posting as an opportunity |
 | GET / POST / PUT | `/companies`, `/companies/{id}` | |
 
-Audit: `opportunity.created`, `opportunity.stage_changed`, `opportunity.archived`,
-`source.created`, `source.deleted`.
+Audit: `opportunity.created|updated|stage_changed|archived|restored`,
+`company.created|updated`, `source.created|deleted`.
 
 ## Matching (F3)
 

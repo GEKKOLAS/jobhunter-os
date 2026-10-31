@@ -1,6 +1,8 @@
 using JobHunter.Application.Identity;
+using JobHunter.Application.Opportunities;
 using JobHunter.Application.Profile;
 using JobHunter.Domain.Identity;
+using JobHunter.Domain.Opportunities;
 using JobHunter.Domain.Profile;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +14,7 @@ namespace JobHunter.Infrastructure.Persistence;
 /// (spec 02 §3). Configurations are registered from this assembly.
 /// </summary>
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
-    : DbContext(options), IIdentityDbContext, IProfileDbContext
+    : DbContext(options), IIdentityDbContext, IProfileDbContext, IOpportunitiesDbContext
 {
     // Identity
     public DbSet<User> Users => Set<User>();
@@ -25,9 +27,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<ProfileSkill> ProfileSkills => Set<ProfileSkill>();
     public DbSet<EvidenceItem> EvidenceItems => Set<EvidenceItem>();
 
+    // Opportunities
+    public DbSet<Company> Companies => Set<Company>();
+    public DbSet<Opportunity> Opportunities => Set<Opportunity>();
+    public DbSet<OpportunityStageChange> OpportunityStageChanges => Set<OpportunityStageChange>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // citext: case-insensitive emails without lower() everywhere.
+        // citext: case-insensitive emails and company names without lower() everywhere.
         modelBuilder.HasPostgresExtension("citext");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }

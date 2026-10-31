@@ -1,5 +1,6 @@
 using FluentValidation;
 using JobHunter.Application.Identity;
+using JobHunter.Application.Opportunities;
 using JobHunter.Application.Profile;
 using JobHunter.Application.Profile.Contracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,12 @@ public static class DependencyInjection
         services.AddScoped<ProfileHandler>();
         services.AddScoped<SkillsHandler>();
         services.AddScoped<EvidenceHandler>();
+
+        // Opportunities
+        services.AddScoped<CompanyResolver>();
+        services.AddScoped<OpportunitiesHandler>();
+        services.AddScoped<CompaniesHandler>();
+        services.AddScoped<BoardHandler>();
 
         return services;
     }
