@@ -14,13 +14,13 @@ internal sealed class OpportunityFactsService(IOpportunitiesDbContext db, ICurre
     {
         var rows = await db.Opportunities.AsNoTracking()
             .Where(o => o.UserId == currentUser.UserId && ids.Contains(o.Id))
-            .Select(o => new { o.Id, o.Title, o.Location, o.WorkMode, o.Stage, o.Priority, o.ArchivedAt, o.CreatedAt })
+            .Select(o => new { o.Id, o.Title, CompanyName = o.Company!.Name, o.Location, o.WorkMode, o.Stage, o.Priority, o.ArchivedAt, o.CreatedAt })
             .ToListAsync(ct);
 
         return rows
             .Select(o => new OpportunityFacts(
-                o.Id, o.Title, o.Location, o.WorkMode, o.Stage, o.Priority,
-                o.ArchivedAt is null && Stages.IsOpen(o.Stage), o.CreatedAt))
+                o.Id, o.Title, o.CompanyName, o.Location, o.WorkMode, o.Stage, o.Priority,
+                o.ArchivedAt is null && Stages.IsOpen(o.Stage), o.ArchivedAt is not null, o.CreatedAt))
             .ToList();
     }
 

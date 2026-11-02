@@ -243,21 +243,38 @@ Audit: `requirements.extracted`, `requirements.updated`.
 
 ## Contacts (F4)
 
-`contacts`: `name` ≤ 120, `company_id?`, `role?`, `email?`, `linkedin_url?` (https,
-linkedin.com only), `phone?`, `notes?` ≤ 2,000, `archived_at?`.
+`contacts`: `name` ≤ 120, `company_id?` (`companyId`, or `companyName` matched or created like
+an opportunity's), `role?` ≤ 120, `email?` (citext, unique per user when set, archived contacts
+included → 409 `contact.duplicate`), `linkedin_url?` (https, linkedin.com and its subdomains
+only; a link pasted without a scheme gets `https://`), `phone?` ≤ 40, `notes?` ≤ 2,000,
+`version`, `archived_at?`.
+
 `contact_opportunities (contact_id, opportunity_id, relation)`, relation
-`recruiter|hiring_manager|referral|interviewer|other`.
-`interactions`: `contact_id`, `opportunity_id?`, `channel`
-(`email|linkedin|phone|video|in_person|other`), `direction` (`outbound|inbound`),
-`occurred_at`, `summary` ≤ 2,000, `outreach_send_id?`.
+`recruiter|hiring_manager|referral|interviewer|other`. Linking again changes the relation.
+
+`interactions`: `contact_id`, `opportunity_id?` (kept if the link is later removed: it's what
+happened), `channel` (`email|linkedin|phone|video|in_person|other`), `direction`
+(`outbound|inbound`), `occurred_at` (not in the future: a planned call is a reminder, not an
+interaction), `summary` 1–2,000. `outreach_send_id?` arrives with phase 7, which is what sets it.
+
+Archiving keeps a contact's links and history, and restoring brings them back. An archived
+contact can't get new links or interactions (409 `contact.archived`) until restored.
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET / POST | `/contacts?q&companyId` | |
-| GET / PUT / DELETE | `/contacts/{id}` | DELETE archives |
+| GET / POST | `/contacts?q&companyId&archived&page&pageSize` | `q` searches name, role, email and company. Rows report `interactionCount`, `lastInteractionAt` and `opportunityCount` |
+| GET / PUT / DELETE | `/contacts/{id}` | GET adds the linked opportunities. PUT carries `version`. DELETE archives |
+| POST | `/contacts/{id}/restore` | Undoes an archive |
 | POST / DELETE | `/contacts/{id}/opportunities/{opportunityId}` | `{ relation }` |
-| GET / POST | `/contacts/{id}/interactions` | Raises `InteractionLogged` |
-| DELETE | `/interactions/{id}` | |
+| GET / POST | `/contacts/{id}/interactions` | Newest first. `opportunityId` not the user's → 422 `interaction.unknown_opportunity`. Raises `InteractionLogged` from phase 7, when the outbox exists |
+| DELETE | `/interactions/{id}` | Removes it for good: it's the user's own log |
+| GET | `/opportunities/{id}/people` | The contacts linked to it and the interactions about it, newest first |
+
+Audit: `contact.created|updated|archived|restored|linked|unlinked`, `interaction.logged|deleted`.
+Summaries and contact details stay out of audit metadata.
+
+Until phase 7 delivers `InteractionLogged`, an inbound interaction doesn't yet mark an application
+as responded; moving it to a responding stage does.
 
 ## Follow-ups (F5)
 

@@ -25,6 +25,192 @@ namespace JobHunter.Infrastructure.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("JobHunter.Domain.Contacts.Contact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("citext")
+                        .HasColumnName("email");
+
+                    b.Property<string>("LinkedInUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("linkedin_url");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("role");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_contacts");
+
+                    b.HasIndex("CompanyId")
+                        .HasDatabaseName("ix_contacts_company_id");
+
+                    b.HasIndex("UserId", "Email")
+                        .IsUnique()
+                        .HasDatabaseName("ix_contacts_user_id_email")
+                        .HasFilter("email IS NOT NULL");
+
+                    b.HasIndex("UserId", "Name")
+                        .HasDatabaseName("ix_contacts_user_id_name");
+
+                    b.ToTable("contacts", (string)null);
+                });
+
+            modelBuilder.Entity("JobHunter.Domain.Contacts.ContactOpportunity", b =>
+                {
+                    b.Property<Guid>("ContactId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contact_id");
+
+                    b.Property<Guid>("OpportunityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opportunity_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Relation")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("relation");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("ContactId", "OpportunityId")
+                        .HasName("pk_contact_opportunities");
+
+                    b.HasIndex("OpportunityId")
+                        .HasDatabaseName("ix_contact_opportunities_opportunity_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_contact_opportunities_user_id");
+
+                    b.ToTable("contact_opportunities", (string)null);
+                });
+
+            modelBuilder.Entity("JobHunter.Domain.Contacts.Interaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("channel");
+
+                    b.Property<Guid>("ContactId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contact_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("direction");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<Guid?>("OpportunityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opportunity_id");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("summary");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_interactions");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_interactions_user_id");
+
+                    b.HasIndex("ContactId", "OccurredAt")
+                        .HasDatabaseName("ix_interactions_contact_id_occurred_at");
+
+                    b.HasIndex("OpportunityId", "OccurredAt")
+                        .HasDatabaseName("ix_interactions_opportunity_id_occurred_at")
+                        .HasFilter("opportunity_id IS NOT NULL");
+
+                    b.ToTable("interactions", (string)null);
+                });
+
             modelBuilder.Entity("JobHunter.Domain.Identity.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -858,6 +1044,69 @@ namespace JobHunter.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_profile_skills_user_id_key");
 
                     b.ToTable("profile_skills", (string)null);
+                });
+
+            modelBuilder.Entity("JobHunter.Domain.Contacts.Contact", b =>
+                {
+                    b.HasOne("JobHunter.Domain.Opportunities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("fk_contacts_companies_company_id");
+
+                    b.HasOne("JobHunter.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_contacts_users_user_id");
+                });
+
+            modelBuilder.Entity("JobHunter.Domain.Contacts.ContactOpportunity", b =>
+                {
+                    b.HasOne("JobHunter.Domain.Contacts.Contact", null)
+                        .WithMany()
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_contact_opportunities_contacts_contact_id");
+
+                    b.HasOne("JobHunter.Domain.Opportunities.Opportunity", null)
+                        .WithMany()
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_contact_opportunities_opportunities_opportunity_id");
+
+                    b.HasOne("JobHunter.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_contact_opportunities_users_user_id");
+                });
+
+            modelBuilder.Entity("JobHunter.Domain.Contacts.Interaction", b =>
+                {
+                    b.HasOne("JobHunter.Domain.Contacts.Contact", null)
+                        .WithMany()
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_interactions_contacts_contact_id");
+
+                    b.HasOne("JobHunter.Domain.Opportunities.Opportunity", null)
+                        .WithMany()
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_interactions_opportunities_opportunity_id");
+
+                    b.HasOne("JobHunter.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_interactions_users_user_id");
                 });
 
             modelBuilder.Entity("JobHunter.Domain.Identity.AuditLog", b =>

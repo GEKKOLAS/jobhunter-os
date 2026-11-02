@@ -3,8 +3,8 @@ namespace JobHunter.Application.Opportunities.Contracts;
 /// <summary>What another module may know about one of the signed-in user's opportunities.</summary>
 /// <param name="CanTakePriority">Open and unarchived: the only ones a suggested priority applies to.</param>
 public sealed record OpportunityFacts(
-    Guid Id, string Title, string? Location, string? WorkMode, string Stage, string Priority,
-    bool CanTakePriority, DateTimeOffset CreatedAt);
+    Guid Id, string Title, string CompanyName, string? Location, string? WorkMode, string Stage, string Priority,
+    bool CanTakePriority, bool Archived, DateTimeOffset CreatedAt);
 
 public interface IOpportunityFacts
 {

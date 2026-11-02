@@ -1,4 +1,5 @@
 using FluentValidation;
+using JobHunter.Application.Contacts;
 using JobHunter.Application.Identity;
 using JobHunter.Application.Matching;
 using JobHunter.Application.Matching.Contracts;
@@ -40,6 +41,11 @@ public static class DependencyInjection
         services.AddScoped<ImportsHandler>();
         services.AddScoped<SourcesHandler>();
         services.AddScoped<IOpportunityFacts, OpportunityFactsService>();
+        services.AddScoped<ICompanyDirectory, CompanyDirectoryService>();
+
+        // Contacts
+        services.AddScoped<ContactsHandler>();
+        services.AddScoped<InteractionsHandler>();
 
         // Matching
         services.AddScoped<RequirementsHandler>();

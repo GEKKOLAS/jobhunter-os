@@ -1,4 +1,5 @@
 using JobHunter.Application.Common;
+using JobHunter.Application.Contacts;
 using JobHunter.Application.Identity;
 using JobHunter.Application.Matching;
 using JobHunter.Application.Opportunities;
@@ -45,6 +46,7 @@ public static class DependencyInjection
         AddIdentity(services, configuration);
         services.AddScoped<IProfileDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IOpportunitiesDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IContactsDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         AddImports(services);
         AddMatching(services);
 

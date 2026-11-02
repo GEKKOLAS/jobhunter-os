@@ -11,7 +11,7 @@ typecheck and build pass, both themes are checked, and this file's status column
 | 3 | Opportunities: capture, board, history (F2) | Done (2026-10-31) |
 | 4 | Imports: text, URL, job-board sources (F2) | Done (2026-11-01) |
 | 5 | Matching (F3) | Done (2026-11-02) |
-| 6 | Contacts (F4) | — |
+| 6 | Contacts (F4) | Done (2026-11-02) |
 | 7 | Outbox + follow-ups, drafts, Outreach Studio (F5) | — |
 | 8 | Analytics + dashboard (F6, F7) | — |
 | 9 | Launch: Docker images, deploy, screenshots, case study | — |
@@ -73,7 +73,8 @@ Contacts, links to opportunities, interactions timeline; `/contacts` pages.
 ## Phase 7 — Outbox and follow-ups
 
 Domain events, outbox interceptor, `DispatchOutboxJob`, inbox receipts (idempotency
-integration test: the same message twice → one effect), reminder rules, `DueRemindersJob`,
+integration test: the same message twice → one effect), `InteractionLogged` (an inbound one
+marks the application as responded) and `outreach_send_id`, reminder rules, `DueRemindersJob`,
 drafts with the Anthropic writer and guardrails, Outreach Studio client (stub handler in tests,
 real `smtp` instance verified manually), approval flow UI.
 

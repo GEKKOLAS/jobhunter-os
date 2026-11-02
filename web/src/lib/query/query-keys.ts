@@ -16,6 +16,12 @@ export const queryKeys = {
   requirements: (id: string) => ["opportunities", "requirements", id] as const,
   fit: (id: string) => ["opportunities", "fit", id] as const,
   companies: ["companies"] as const,
+  /** Every contact query; invalidate this prefix after any change to a contact, a link or the log. */
+  contacts: ["contacts"] as const,
+  contactList: (filters: object) => ["contacts", "list", filters] as const,
+  contact: (id: string) => ["contacts", "detail", id] as const,
+  interactions: (id: string) => ["contacts", "interactions", id] as const,
+  people: (opportunityId: string) => ["contacts", "people", opportunityId] as const,
   sources: ["sources"] as const,
   sourcePostings: (id: string) => ["sources", id, "postings"] as const,
 };
