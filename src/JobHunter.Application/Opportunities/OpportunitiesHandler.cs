@@ -52,26 +52,48 @@ public sealed class OpportunitiesHandler(
         return OpportunityDto.From(opportunity, opportunity.Company!);
     }
 
-    public async Task<OpportunityDto> CreateAsync(OpportunityInput input, CancellationToken ct)
+    /// <summary>
+    /// Saves a new opportunity. A <c>SourceRef</c> that's already saved updates that one instead:
+    /// the posting's fields change; its stage, priority and history stay (spec 03, Dedupe).
+    /// </summary>
+    public async Task<SavedOpportunity> SaveAsync(OpportunityInput input, CancellationToken ct)
     {
         await inputValidator.ValidateAndThrowAsync(input, ct);
         var company = await companies.ResolveAsync(input.CompanyId, input.CompanyName, ct);
+        var source = input.Source ?? "manual";
+        var sourceRef = Trimmed(input.SourceRef);
+
+        if (sourceRef is not null)
+        {
+            var existing = await db.Opportunities.FirstOrDefaultAsync(
+                o => o.UserId == currentUser.UserId && o.Source == source && o.SourceRef == sourceRef, ct);
+            if (existing is not null)
+            {
+                existing.CompanyId = company.Id;
+                existing.Title = input.Title.Trim();
+                Apply(existing, input with { Priority = null });
+                audit.Add(OpportunitiesAudit.Reimported, currentUser.UserId, "opportunity", existing.Id);
+                await db.SaveChangesAsync(ct);
+                return new SavedOpportunity(OpportunityDto.From(existing, company), Created: false);
+            }
+        }
 
         var opportunity = new Opportunity
         {
             UserId = currentUser.UserId,
             CompanyId = company.Id,
             Title = input.Title.Trim(),
-            Source = "manual",
+            Source = source,
+            SourceRef = sourceRef,
         };
         Apply(opportunity, input);
         var start = opportunity.Start(input.Stage ?? Stages.Saved, clock.UtcNow);
 
         db.Opportunities.Add(opportunity);
         db.OpportunityStageChanges.Add(start);
-        audit.Add(OpportunitiesAudit.Created, currentUser.UserId, "opportunity", opportunity.Id, new { opportunity.Stage });
+        audit.Add(OpportunitiesAudit.Created, currentUser.UserId, "opportunity", opportunity.Id, new { opportunity.Stage, source });
         await db.SaveChangesAsync(ct);
-        return OpportunityDto.From(opportunity, company);
+        return new SavedOpportunity(OpportunityDto.From(opportunity, company), Created: true);
     }
 
     /// <summary>Edits everything but the stage, which only moves through <see cref="MoveAsync"/>.</summary>

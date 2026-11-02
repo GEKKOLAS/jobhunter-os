@@ -38,6 +38,9 @@ public sealed record OpportunityDto(
         o.Version, o.CreatedAt, o.UpdatedAt);
 }
 
+/// <param name="Created">False when it updated an opportunity already saved under the same source ref.</param>
+public sealed record SavedOpportunity(OpportunityDto Opportunity, bool Created);
+
 public sealed record StageChangeDto(Guid Id, string? FromStage, string ToStage, DateTimeOffset OccurredAt, string? Note)
 {
     public static StageChangeDto From(OpportunityStageChange c) => new(c.Id, c.FromStage, c.ToStage, c.OccurredAt, c.Note);
@@ -53,6 +56,9 @@ public static class OpportunitiesAudit
 {
     public const string Created = "opportunity.created";
     public const string Updated = "opportunity.updated";
+    public const string Reimported = "opportunity.reimported";
+    public const string SourceCreated = "source.created";
+    public const string SourceDeleted = "source.deleted";
     public const string StageChanged = "opportunity.stage_changed";
     public const string Archived = "opportunity.archived";
     public const string Restored = "opportunity.restored";

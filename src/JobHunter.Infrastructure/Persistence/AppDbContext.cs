@@ -31,6 +31,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OpportunityStageChange> OpportunityStageChanges => Set<OpportunityStageChange>();
+    public DbSet<JobSource> JobSources => Set<JobSource>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

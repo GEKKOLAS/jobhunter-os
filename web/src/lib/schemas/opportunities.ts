@@ -105,6 +105,9 @@ export type OpportunityInput = {
   salaryPeriod: Opportunity["salaryPeriod"];
   sourceUrl: string | null;
   description: string;
-  priority: Priority;
+  priority?: Priority;
   stage?: OpenStage;
+  /** Where an import came from; saving a ref already saved updates it instead of duplicating. */
+  source?: string;
+  sourceRef?: string | null;
 };

@@ -278,6 +278,57 @@ namespace JobHunter.Infrastructure.Persistence.Migrations
                     b.ToTable("companies", (string)null);
                 });
 
+            modelBuilder.Entity("JobHunter.Domain.Opportunities.JobSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Board")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("board");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("label");
+
+                    b.Property<DateTimeOffset?>("LastCheckedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_checked_at");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("provider");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_job_sources");
+
+                    b.HasIndex("UserId", "Provider", "Board")
+                        .IsUnique()
+                        .HasDatabaseName("ix_job_sources_user_id_provider_board");
+
+                    b.ToTable("job_sources", (string)null);
+                });
+
             modelBuilder.Entity("JobHunter.Domain.Opportunities.Opportunity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -721,6 +772,16 @@ namespace JobHunter.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_companies_users_user_id");
+                });
+
+            modelBuilder.Entity("JobHunter.Domain.Opportunities.JobSource", b =>
+                {
+                    b.HasOne("JobHunter.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_job_sources_users_user_id");
                 });
 
             modelBuilder.Entity("JobHunter.Domain.Opportunities.Opportunity", b =>

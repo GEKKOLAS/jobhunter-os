@@ -35,10 +35,15 @@ export default function BoardPage() {
         title="Board"
         description="Drag a card to move it, or use its Move menu. Only moves that make sense are offered."
         action={
-          <Button onClick={() => setAdding("saved")}>
-            <Plus />
-            New opportunity
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href="/sources">Import</Link>
+            </Button>
+            <Button onClick={() => setAdding("saved")}>
+              <Plus />
+              New opportunity
+            </Button>
+          </div>
         }
       />
 
@@ -49,12 +54,17 @@ export default function BoardPage() {
           <CardContent className="flex flex-col items-start gap-3 py-6">
             <p className="font-semibold">No opportunities yet.</p>
             <p className="text-sm text-muted-foreground">
-              Add a job you&apos;re considering. Importing from a link or a company&apos;s job board arrives in phase 4.
+              Add a job you&apos;re considering, or import one from a link, pasted text or a company&apos;s job board.
             </p>
-            <Button onClick={() => setAdding("saved")}>
-              <Plus />
-              Add your first opportunity
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setAdding("saved")}>
+                <Plus />
+                Add your first opportunity
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/sources">Import one</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -14,4 +14,6 @@ export const queryKeys = {
   opportunity: (id: string) => ["opportunities", "detail", id] as const,
   history: (id: string) => ["opportunities", "history", id] as const,
   companies: ["companies"] as const,
+  sources: ["sources"] as const,
+  sourcePostings: (id: string) => ["sources", id, "postings"] as const,
 };

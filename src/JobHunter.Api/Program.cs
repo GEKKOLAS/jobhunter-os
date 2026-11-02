@@ -68,6 +68,7 @@ builder.Services.AddRateLimiter(options =>
     }
 
     options.AddPolicy("auth", context => Fixed(context, o => o.Auth));
+    options.AddPolicy("import", context => Fixed(context, o => o.Import));
 });
 
 var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
@@ -86,11 +87,12 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 
+// Outermost, so the log shows the status the client really got, not an exception passing through.
+app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
 // Bodiless errors (unknown routes, 401/403 challenges, 405s, 429s) still answer with ProblemDetails.
 app.UseStatusCodePages();
 app.UseMiddleware<SecurityHeadersMiddleware>();
-app.UseSerilogRequestLogging();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<CsrfMiddleware>();

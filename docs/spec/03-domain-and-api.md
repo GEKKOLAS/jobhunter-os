@@ -127,9 +127,41 @@ by a correction, since the event happened. Every move writes
 `opportunity_stage_changes (from, to, at, note? ≤ 500)`. `OpportunityStageChanged` is
 raised from phase 7, when the outbox exists.
 
-`job_sources`: `provider` (`greenhouse|lever|ashby`), `board` (the company's board token),
-`label`, `last_checked_at?`. Listing a source's postings is **read-only**: the user picks
-which postings to save. Postings already saved are flagged.
+**Imports never save.** They return a preview that the user checks in the capture dialog and
+then saves with `POST /opportunities`: the same fields as `OpportunityInput` (with
+`companyName`), plus `source`, `sourceRef`, `parsedFrom`
+(`job_board|structured_data|page_text|pasted_text`), `warnings[]` and
+`existingOpportunityId?` (already saved under this ref). A URL goes through, in order:
+
+1. **Sites whose terms forbid automated access** (LinkedIn, Indeed, Glassdoor, ZipRecruiter,
+   Monster) → 422 `import.not_allowed`, suggesting a paste. PRD principle 4.
+2. **Job-board links** (`boards.greenhouse.io`/`job-boards.greenhouse.io/{board}/jobs/{id}`,
+   `jobs.lever.co/{board}/{id}`, `jobs.ashbyhq.com/{board}/{id}`) use the provider's public API,
+   so they get the full posting and the same ref as saving from a source. Real Greenhouse and
+   Ashby pages carry little or nothing a plain fetch can read.
+3. **Any other page** is fetched through the SSRF guard (spec 02 §5). `JobPosting` JSON-LD is
+   preferred; otherwise heuristics read the title and main text. A page with under 200
+   characters of text gets a warning to paste the posting instead (it likely needs JavaScript).
+
+Pasted text is read by heuristics only: labelled lines (`Company:`, `Location:`), the first
+line as title, keywords for work mode and type, and a salary only when a currency and an
+amount are both stated and the text says it is pay: the line names pay, sits right under a short
+pay heading ("Base Salary"), or states its period. A currency code after the amount settles what
+a bare `$` meant. Nothing is guessed beyond that, and every field stays editable.
+
+**Dedupe.** `source_ref` is `{board}:{id}` for job boards and the SHA-256 of the URL (no
+fragment, no `utm_*`) for other pages; pastes have none. `POST /opportunities` with a ref
+already saved updates the posting's fields (title, company, location, type, salary, link,
+description) and keeps the stage, priority and history: 200 instead of 201, audit
+`opportunity.reimported`.
+
+`job_sources` (≤ 50 per user): `provider` (`greenhouse|lever|ashby`), `board` (the company's
+board token, `^[A-Za-z0-9_-]{1,100}$`), `label` ≤ 80 (default: the token, tidied; it names the
+company unless the provider states one), `last_checked_at?`. Unique (user, provider, board) →
+409 `source.duplicate`; limit → 409 `source.limit`. Adding one checks the board exists (404 →
+422 `source.not_found`). A provider failure → 502 `source.unavailable`. Listing a source's
+postings is **read-only**: the user picks which postings to save. Postings already saved are
+flagged. Unlisted postings are left out.
 
 | Method | Path | Notes |
 |--------|------|-------|
@@ -140,14 +172,14 @@ which postings to save. Postings already saved are flagged.
 | POST | `/opportunities/{id}/stage` | `{ stage, note? }`; illegal move → 409 `opportunity.invalid_stage` |
 | GET | `/opportunities/{id}/history` | Stage changes, oldest first |
 | GET | `/board` | One column per open stage: opportunities by priority (high first) then oldest first; plus counts of closed ones by stage |
-| POST | `/imports/text` | `{ text }` → preview (parsed fields, not saved) |
-| POST | `/imports/url` | `{ url }` → preview; rate limit `import`; SSRF rules in spec 02 §5; failures → 422 `import.unreachable` / `import.unsupported` |
-| GET / POST | `/sources` · DELETE `/sources/{id}` | |
-| GET | `/sources/{id}/postings` | Fetched live; `{ items: [{ ref, title, location, url, alreadySaved }] }` |
-| POST | `/sources/{id}/postings/{ref}/save` | Saves one posting as an opportunity |
+| POST | `/imports/text` | `{ text }` (≤ 50,000 chars) → preview |
+| POST | `/imports/url` | `{ url }` → preview; rate limit `import`; SSRF rules in spec 02 §5; failures → 422 `import.not_allowed` / `import.unreachable` / `import.unsupported` |
+| GET / POST | `/sources` · DELETE `/sources/{id}` | POST rate limit `import` (it calls the provider) |
+| GET | `/sources/{id}/postings` | Fetched live, rate limit `import`; `{ items: [{ ref, title, location, url, alreadySaved }] }` |
+| POST | `/sources/{id}/postings/{ref}/save` | Saves one posting as an opportunity: 201, or 200 if it was already saved and got updated; gone from the board → 404 `source.posting_gone` |
 | GET / POST / PUT | `/companies`, `/companies/{id}` | |
 
-Audit: `opportunity.created|updated|stage_changed|archived|restored`,
+Audit: `opportunity.created|updated|reimported|stage_changed|archived|restored`,
 `company.created|updated`, `source.created|deleted`.
 
 ## Matching (F3)

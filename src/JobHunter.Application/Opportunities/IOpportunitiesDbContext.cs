@@ -10,6 +10,7 @@ public interface IOpportunitiesDbContext
     DbSet<Company> Companies { get; }
     DbSet<Opportunity> Opportunities { get; }
     DbSet<OpportunityStageChange> OpportunityStageChanges { get; }
+    DbSet<JobSource> JobSources { get; }
 
     /// <summary>Used to check a client's <c>version</c> against the stored one on save.</summary>
     EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;

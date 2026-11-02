@@ -5,10 +5,12 @@ namespace JobHunter.Application.Opportunities;
 
 /// <summary>What a user can set on an opportunity. The company is an id, or a name matched or created.</summary>
 /// <param name="Stage">Only on create: where it starts (an open stage, default <c>saved</c>).</param>
+/// <param name="Source">Only on create: where it came from (default <c>manual</c>); imports pass their preview's value.</param>
+/// <param name="SourceRef">Only on create: saving a ref that's already saved updates it instead of duplicating.</param>
 public sealed record OpportunityInput(
     string Title, Guid? CompanyId, string? CompanyName, string? Location, string? WorkMode, string? EmploymentType,
     int? SalaryMin, int? SalaryMax, string? SalaryCurrency, string? SalaryPeriod, string? SourceUrl,
-    string? Description, string? Priority, string? Stage = null);
+    string? Description, string? Priority, string? Stage = null, string? Source = null, string? SourceRef = null);
 
 public sealed class OpportunityInputValidator : AbstractValidator<OpportunityInput>
 {
@@ -39,6 +41,9 @@ public sealed class OpportunityInputValidator : AbstractValidator<OpportunityInp
             .WithMessage($"Priority must be one of: {string.Join(", ", OpportunityVocabulary.Priorities)}.");
         RuleFor(x => x.Stage).Must(v => v is null || Stages.IsOpen(v))
             .WithMessage($"A new opportunity starts at an open stage: {string.Join(", ", Stages.Open)}.");
+        RuleFor(x => x.Source).Must(v => v is null || OpportunityVocabulary.Sources.Contains(v))
+            .WithMessage($"Source must be one of: {string.Join(", ", OpportunityVocabulary.Sources)}.");
+        RuleFor(x => x.SourceRef).MaximumLength(200);
     }
 }
 

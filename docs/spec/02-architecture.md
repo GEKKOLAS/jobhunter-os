@@ -25,7 +25,7 @@ src/
   JobHunter.Api/             controllers, auth handlers, middleware, composition root
 tests/
   JobHunter.UnitTests/
-  JobHunter.IntegrationTests/  Testcontainers PostgreSQL + WireMock doubles
+  JobHunter.IntegrationTests/  Testcontainers PostgreSQL + stubbed HTTP handlers
   JobHunter.ArchitectureTests/ layer and module rules
 web/                         Next.js app
 docs/spec/
@@ -101,11 +101,15 @@ Ported from Mail Template Hub, same rules:
 - **Secrets at rest:** the Outreach Studio API key is encrypted with AES-256-GCM using a
   per-row data key wrapped by a versioned key-encryption key from configuration (the same
   envelope scheme as Mail Template Hub's OAuth tokens). It is write-only through the API.
-- **URL import (SSRF):** `https` only (and `http` in development); the host is resolved
-  and every address must be public (no loopback, private, link-local, CGNAT or metadata
-  ranges); redirects are followed manually (max 3) and each hop is re-validated; 10 s
-  timeout; 2 MB body cap; `text/html` or `text/plain` only. The fetched HTML is reduced to
-  text and never rendered.
+- **URL import (SSRF):** `https` only (and `http` when `Imports:AllowHttp` is set, in
+  development); ports 80/443 only; no credentials in the URL; names like `localhost`, `*.local`
+  and `*.internal` refused outright. The host is resolved **while connecting**, inside the HTTP
+  handler's connect callback: every address must be public (no loopback, private, link-local,
+  CGNAT, documentation, multicast or metadata ranges, and IPv6 forms that embed one) and the
+  connection goes to an address that was checked, so DNS rebinding can't slip past a
+  check made earlier. Redirects are followed manually (max 3) and each hop is re-validated;
+  10 s timeout; 2 MB body cap; `text/html` or `text/plain` only; no cookies. The fetched HTML
+  is reduced to text and never rendered.
 - **Untrusted text:** posting descriptions are stored as plain text (HTML stripped on
   ingest) and rendered as text, so a posting can't inject markup into the app.
 - **Headers, logging, audit:** security headers middleware, Serilog with secret scrubbing,
@@ -119,7 +123,7 @@ configuration (`Ai:Model`, `Ai:FastModel`).
 | Port | Used for | Without an API key |
 |------|----------|--------------------|
 | `IRequirementExtractor` | Posting text → requirements (must/nice, skill, years) | `RuleBasedRequirementExtractor`: skill catalog + "N+ years" patterns, labelled `rules` |
-| `IPostingParser` | Imported page text → title, company, location, description | Heuristics from the page `<title>` and `JobPosting` JSON-LD when present |
+| `IPostingParser` | Imported page text → title, company, location, description | Heuristics from the page `<title>` and `JobPosting` JSON-LD when present (phase 4 ships these; an AI parser can replace them behind the port once the Anthropic client exists, in phase 5) |
 | `IDraftWriter` | Follow-up / thank-you drafts from facts the user selected | Unavailable; the UI offers a blank draft (a fake draft is worse than none) |
 
 Guardrails: prompts receive only the facts needed; drafts must not mention skills,
@@ -137,7 +141,8 @@ output that fails validation is rejected, not repaired. The fit score is compute
 - **Job boards.** Greenhouse (`boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true`),
   Lever (`api.lever.co/v0/postings/{company}?mode=json`) and Ashby
   (`api.ashbyhq.com/posting-api/job-board/{name}`) are public APIs companies publish for
-  their own careers pages. Base URLs are configurable so tests point at WireMock.
+  their own careers pages. Base URLs are configurable (`Imports:*BaseUrl`). Their responses are
+  capped at 32 MB (a large board with full text is several MB) and time out after 20 s.
 
 ## 8. Observability and operations
 

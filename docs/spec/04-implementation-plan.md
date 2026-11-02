@@ -9,7 +9,7 @@ typecheck and build pass, both themes are checked, and this file's status column
 | 1 | Identity | Done (2026-10-31) |
 | 2 | Profile & evidence (F1) | Done (2026-10-31) |
 | 3 | Opportunities: capture, board, history (F2) | Done (2026-10-31) |
-| 4 | Imports: text, URL, job-board sources (F2) | — |
+| 4 | Imports: text, URL, job-board sources (F2) | Done (2026-11-01) |
 | 5 | Matching (F3) | — |
 | 6 | Contacts (F4) | — |
 | 7 | Outbox + follow-ups, drafts, Outreach Studio (F5) | — |
@@ -57,7 +57,7 @@ endpoint; `/board` Kanban (drag between columns, keyboard-accessible move menu),
 
 Text import (heuristics + JSON-LD `JobPosting`), URL import with the SSRF guard
 (unit-tested against private/loopback/metadata addresses and redirect hops), Greenhouse /
-Lever / Ashby clients with WireMock fixtures, "Add from a company board" flow, dedupe by
+Lever / Ashby clients with fixtures shaped like their real responses, "Add from a company board" flow, dedupe by
 `source_ref`.
 
 ## Phase 5 — Matching
@@ -74,7 +74,7 @@ Contacts, links to opportunities, interactions timeline; `/contacts` pages.
 
 Domain events, outbox interceptor, `DispatchOutboxJob`, inbox receipts (idempotency
 integration test: the same message twice → one effect), reminder rules, `DueRemindersJob`,
-drafts with the Anthropic writer and guardrails, Outreach Studio client (WireMock in tests,
+drafts with the Anthropic writer and guardrails, Outreach Studio client (stub handler in tests,
 real `smtp` instance verified manually), approval flow UI.
 
 ## Phase 8 — Analytics and dashboard
@@ -93,7 +93,7 @@ OpenTelemetry exporter, README screenshots in both themes, and a case-study writ
 | Level | Tools | Covers |
 |-------|-------|--------|
 | Unit | xUnit | Stage machine, scoring, skill normalization, SSRF guard, parsers, guardrails |
-| Integration | xUnit, `WebApplicationFactory`, Testcontainers PostgreSQL 16, WireMock | Every endpoint, ownership isolation, outbox delivery, jobs |
+| Integration | xUnit, `WebApplicationFactory`, Testcontainers PostgreSQL 16, stubbed HTTP handlers for outside services | Every endpoint, ownership isolation, outbox delivery, jobs |
 | Architecture | NetArchTest | Layer rules, module boundaries |
 | Web | Vitest + Testing Library; Playwright for screenshots | Pure logic (board grouping, score display, rate formatting), key components |
 

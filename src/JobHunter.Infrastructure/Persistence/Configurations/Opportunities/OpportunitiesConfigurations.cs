@@ -69,3 +69,16 @@ internal sealed class OpportunityStageChangeConfiguration : IEntityTypeConfigura
         builder.HasIndex(c => new { c.UserId, c.OccurredAt });
     }
 }
+
+internal sealed class JobSourceConfiguration : IEntityTypeConfiguration<JobSource>
+{
+    public void Configure(EntityTypeBuilder<JobSource> builder)
+    {
+        builder.HasKey(s => s.Id);
+        builder.HasOne<User>().WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.Property(s => s.Provider).HasMaxLength(20).IsRequired();
+        builder.Property(s => s.Board).HasMaxLength(100).IsRequired();
+        builder.Property(s => s.Label).HasMaxLength(80).IsRequired();
+        builder.HasIndex(s => new { s.UserId, s.Provider, s.Board }).IsUnique();
+    }
+}

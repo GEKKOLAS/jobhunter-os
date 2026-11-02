@@ -7,6 +7,9 @@ public sealed class RateLimitingOptions
 
     public PolicyOptions Auth { get; init; } = new() { PermitLimit = 10, WindowMinutes = 15 };
 
+    /// <summary>Anything that calls out to another site on the user's behalf.</summary>
+    public PolicyOptions Import { get; init; } = new() { PermitLimit = 60, WindowMinutes = 60 };
+
     public sealed class PolicyOptions
     {
         public int PermitLimit { get; init; } = 10;

@@ -21,7 +21,7 @@ import {
   WORK_MODES,
 } from "@/lib/schemas/opportunities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
 const EMPTY: OpportunityInput = {
@@ -61,23 +61,32 @@ const orNull = (value: string) => (value.trim() === "" ? null : value);
 const numberOrNull = (value: string) => (value === "" ? null : Number(value));
 
 /**
- * Capture a job by hand, or edit one. The company is typed by name: an existing one is
- * matched (ignoring case) and a new one is created. Mount it fresh for each use.
+ * Capture a job by hand, check an import, or edit one. The company is typed by name: an
+ * existing one is matched (ignoring case) and a new one is created. Mount it fresh for each use.
  */
 export function OpportunityDialog({
   opportunity,
   initialStage,
+  draft,
+  note,
+  saveLabel,
   onClose,
   onSaved,
 }: {
   opportunity?: Opportunity;
   initialStage?: OpenStage;
+  /** An import's values to check before saving. */
+  draft?: OpportunityInput;
+  /** Shown instead of the usual description: where the draft came from, and how sure it is. */
+  note?: ReactNode;
+  /** The save button, when "Add opportunity" isn't what it does. */
+  saveLabel?: string;
   onClose: () => void;
   onSaved?: (saved: Opportunity) => void;
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<OpportunityInput>(
-    opportunity ? fromOpportunity(opportunity) : { ...EMPTY, stage: initialStage ?? "saved" },
+    opportunity ? fromOpportunity(opportunity) : (draft ?? { ...EMPTY, stage: initialStage ?? "saved" }),
   );
   const [errors, setErrors] = useState<FormErrors>(NO_ERRORS);
   const companies = useQuery({ queryKey: queryKeys.companies, queryFn: listCompanies });
@@ -114,9 +123,9 @@ export function OpportunityDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{opportunity ? "Edit opportunity" : "New opportunity"}</DialogTitle>
+          <DialogTitle>{opportunity ? "Edit opportunity" : draft ? "Check and save" : "New opportunity"}</DialogTitle>
           <DialogDescription>
-            {opportunity ? "Stage changes happen from the board or the Move menu." : "Paste what the posting says. Only what it states."}
+            {note ?? (opportunity ? "Stage changes happen from the board or the Move menu." : "Paste what the posting says. Only what it states.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -250,18 +259,20 @@ export function OpportunityDialog({
             />
           </Field>
 
-          <fieldset className="space-y-1.5">
-            <legend className="text-sm font-medium">Priority</legend>
-            <div className="flex gap-1.5">
-              {PRIORITIES.map((p) => (
-                <ToggleChip key={p} pressed={form.priority === p} onToggle={() => set("priority", p)}>
-                  {PRIORITY_LABELS[p]}
-                </ToggleChip>
-              ))}
-            </div>
-          </fieldset>
+          {form.priority && (
+            <fieldset className="space-y-1.5">
+              <legend className="text-sm font-medium">Priority</legend>
+              <div className="flex gap-1.5">
+                {PRIORITIES.map((p) => (
+                  <ToggleChip key={p} pressed={form.priority === p} onToggle={() => set("priority", p)}>
+                    {PRIORITY_LABELS[p]}
+                  </ToggleChip>
+                ))}
+              </div>
+            </fieldset>
+          )}
 
-          {!opportunity && (
+          {!opportunity && form.stage && (
             <Field id="opp-stage" label="Starts at" error={fieldError(errors, "stage")} hint="Already applied? Start it there.">
               <NativeSelect id="opp-stage" value={form.stage} onChange={(e) => set("stage", e.target.value as OpenStage)}>
                 {OPEN_STAGES.map((s) => (
@@ -286,7 +297,7 @@ export function OpportunityDialog({
 
         <DialogFooter>
           <Button type="submit" form="opportunity-form" disabled={save.isPending}>
-            {save.isPending ? "Saving…" : opportunity ? "Save" : "Add opportunity"}
+            {save.isPending ? "Saving…" : (saveLabel ?? (opportunity ? "Save" : "Add opportunity"))}
           </Button>
         </DialogFooter>
       </DialogContent>

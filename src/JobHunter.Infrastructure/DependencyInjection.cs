@@ -1,8 +1,11 @@
 using JobHunter.Application.Common;
 using JobHunter.Application.Identity;
 using JobHunter.Application.Opportunities;
+using JobHunter.Application.Opportunities.Imports;
 using JobHunter.Application.Profile;
 using JobHunter.Infrastructure.Identity;
+using JobHunter.Infrastructure.Opportunities.Imports;
+using JobHunter.Infrastructure.Opportunities.JobBoards;
 using JobHunter.Infrastructure.Persistence;
 using JobHunter.Infrastructure.Persistence.Interceptors;
 using JobHunter.Infrastructure.Time;
@@ -15,6 +18,9 @@ namespace JobHunter.Infrastructure;
 
 public static class DependencyInjection
 {
+    /// <summary>The HTTP client name for page imports; tests give it a stub handler.</summary>
+    public const string PostingFetcherClient = "posting-fetcher";
+
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<DatabaseOptions>()
@@ -37,8 +43,32 @@ public static class DependencyInjection
         AddIdentity(services, configuration);
         services.AddScoped<IProfileDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IOpportunitiesDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        AddImports(services);
 
         return services;
+    }
+
+    private static void AddImports(IServiceCollection services)
+    {
+        services.AddOptions<ImportOptions>().BindConfiguration(ImportOptions.SectionName);
+        services.AddSingleton<IPostingParser, PostingParser>();
+
+        // User-supplied URLs only ever go through the guarded connector (spec 02 §5).
+        services.AddSingleton<IHostResolver, DnsHostResolver>();
+        services.AddSingleton<GuardedConnector>();
+        services.AddHttpClient<IPostingFetcher, SafePostingFetcher>(PostingFetcherClient, client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<GuardedConnector>().CreateHandler());
+
+        // Fixed base URLs, so no guard; a large board with full text is several MB.
+        services.AddHttpClient(JobBoardClient.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.MaxResponseContentBufferSize = 32 * 1024 * 1024;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("JobHunterOS/0.1 (job search tool)");
+        });
+        services.AddSingleton<IJobBoardClient, GreenhouseClient>();
+        services.AddSingleton<IJobBoardClient, LeverClient>();
+        services.AddSingleton<IJobBoardClient, AshbyClient>();
     }
 
     private static void AddIdentity(IServiceCollection services, IConfiguration configuration)

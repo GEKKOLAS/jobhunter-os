@@ -11,11 +11,11 @@ public sealed class OpportunitiesController(OpportunitiesHandler handler) : Cont
     public sealed record OpportunityRequest(
         string Title, Guid? CompanyId, string? CompanyName, string? Location, string? WorkMode, string? EmploymentType,
         int? SalaryMin, int? SalaryMax, string? SalaryCurrency, string? SalaryPeriod, string? SourceUrl,
-        string? Description, string? Priority, string? Stage = null, uint Version = 0)
+        string? Description, string? Priority, string? Stage = null, string? Source = null, string? SourceRef = null, uint Version = 0)
     {
         public OpportunityInput ToInput() => new(
             Title, CompanyId, CompanyName, Location, WorkMode, EmploymentType, SalaryMin, SalaryMax,
-            SalaryCurrency, SalaryPeriod, SourceUrl, Description, Priority, Stage);
+            SalaryCurrency, SalaryPeriod, SourceUrl, Description, Priority, Stage, Source, SourceRef);
     }
 
     [HttpGet]
@@ -25,8 +25,11 @@ public sealed class OpportunitiesController(OpportunitiesHandler handler) : Cont
         handler.ListAsync(new OpportunityListQuery(stage, priority, q, archived, page, pageSize), ct);
 
     [HttpPost]
-    public async Task<IActionResult> Create(OpportunityRequest request, CancellationToken ct) =>
-        StatusCode(StatusCodes.Status201Created, await handler.CreateAsync(request.ToInput(), ct));
+    public async Task<IActionResult> Create(OpportunityRequest request, CancellationToken ct)
+    {
+        var saved = await handler.SaveAsync(request.ToInput(), ct);
+        return saved.Created ? StatusCode(StatusCodes.Status201Created, saved.Opportunity) : Ok(saved.Opportunity);
+    }
 
     [HttpGet("{id:guid}")]
     public Task<OpportunityDto> Get(Guid id, CancellationToken ct) => handler.GetAsync(id, ct);

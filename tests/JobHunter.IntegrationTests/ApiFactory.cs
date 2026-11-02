@@ -1,4 +1,5 @@
 using JobHunter.Application.Identity;
+using JobHunter.Infrastructure.Opportunities.JobBoards;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public RecordingResetNotifier ResetLinks { get; } = new();
 
+    /// <summary>Every outside site, as far as the API can tell.</summary>
+    public StubHttp Outside { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -34,9 +38,18 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Auth:WebBaseUrl", "http://web.test");
         // Every test client shares one IP; tests that exercise the limit lower it themselves.
         builder.UseSetting("RateLimiting:Auth:PermitLimit", "100000");
+        builder.UseSetting("RateLimiting:Import:PermitLimit", "100000");
 
         builder.ConfigureServices(services =>
-            services.Replace(ServiceDescriptor.Singleton<IPasswordResetNotifier>(ResetLinks)));
+        {
+            services.Replace(ServiceDescriptor.Singleton<IPasswordResetNotifier>(ResetLinks));
+
+            // No test leaves the machine: page imports and job boards both answer from the stub.
+            services.AddHttpClient(JobHunter.Infrastructure.DependencyInjection.PostingFetcherClient)
+                .ConfigurePrimaryHttpMessageHandler(() => Outside);
+            services.AddHttpClient(JobBoardClient.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => Outside);
+        });
     }
 
     public TestSession NewSession() => new(CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false }));
