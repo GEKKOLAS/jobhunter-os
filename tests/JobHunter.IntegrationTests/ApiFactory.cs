@@ -1,4 +1,5 @@
 using JobHunter.Application.Identity;
+using JobHunter.Infrastructure.Matching;
 using JobHunter.Infrastructure.Opportunities.JobBoards;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -39,6 +40,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Every test client shares one IP; tests that exercise the limit lower it themselves.
         builder.UseSetting("RateLimiting:Auth:PermitLimit", "100000");
         builder.UseSetting("RateLimiting:Import:PermitLimit", "100000");
+        builder.UseSetting("RateLimiting:Ai:PermitLimit", "100000");
 
         builder.ConfigureServices(services =>
         {
@@ -48,6 +50,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddHttpClient(JobHunter.Infrastructure.DependencyInjection.PostingFetcherClient)
                 .ConfigurePrimaryHttpMessageHandler(() => Outside);
             services.AddHttpClient(JobBoardClient.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => Outside);
+            services.AddHttpClient(AnthropicRequirementExtractor.HttpClientName)
                 .ConfigurePrimaryHttpMessageHandler(() => Outside);
         });
     }

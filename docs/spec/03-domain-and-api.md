@@ -76,8 +76,8 @@ Rows edited in place carry `version` (PostgreSQL `xmin`); a PUT with a stale ver
 409 `concurrency.conflict`.
 
 Audit: `profile.updated`, `skill.created|updated|deleted`, `evidence.created|updated|deleted`.
-Events: `ProfileChanged` (skills or seniority changed), raised from phase 7 when the outbox
-exists; until then Matching compares the profile's `updated_at` with the assessment's.
+Other modules read skills and preferences through
+`JobHunter.Application.Profile.Contracts.ICandidateFacts`.
 
 ## Opportunities (F2)
 
@@ -184,13 +184,17 @@ Audit: `opportunity.created|updated|reimported|stage_changed|archived|restored`,
 
 ## Matching (F3)
 
-`opportunity_requirements`: `text` ≤ 300, `kind` (`must|nice`), `skill_key?`,
-`years_min?`, `origin` (`rules|ai|user`), `confirmed bool`. Re-extraction replaces
-unconfirmed rows only.
+`opportunity_requirements` (≤ 50 per opportunity): `text` ≤ 300, `kind` (`must|nice`),
+`skill_key?` (from the skill catalog, like a profile skill's key), `years_min?` (0–40),
+`origin` (`rules|ai|user`), `confirmed bool`, `position`. Extraction writes unconfirmed rows
+and replaces only unconfirmed rows: confirmed ones stay, and a new row for a skill or text
+already confirmed is left out. **Only confirmed requirements count toward the score**, so
+nothing a parser guessed moves a number until the user has checked it.
 
-`fit_assessments` (one current row per opportunity): `score` 0–100, `band`,
-`covered jsonb`, `partial jsonb`, `gaps jsonb`, `notes jsonb`, `algorithm_version`,
-`computed_at`, `stale bool`.
+`fit_assessments` (one current row per opportunity with confirmed requirements): `score?`
+0–100, `band?`, `outcomes jsonb` (each requirement: `covered|partial|gap|not_scored`, why, and
+what the profile has), `notes jsonb`, `algorithm_version`, `computed_at` (when the result last
+changed).
 
 **Algorithm v1 (deterministic, documented in the UI):**
 
@@ -199,25 +203,43 @@ unconfirmed rows only.
 - Coverage per requirement: **1** when the profile has the skill with level ≥ 3 and years ≥
   `years_min` (if any); **0.5** when the skill is present but under the level or years, or
   when only a related skill from the same catalog family is present; **0** otherwise.
-- `score = round(100 × Σ weight × coverage ÷ Σ weight)`; no scored requirements → no
-  score ("not enough information").
+- `score = round(100 × Σ weight × coverage ÷ Σ weight)`, halves away from zero. No score
+  ("not enough information") when there are no confirmed requirements, none has a skill, or
+  the profile has no skills yet: a 0 would say something the data doesn't.
 - Bands: ≥ 75 strong, ≥ 55 good, ≥ 35 partial, below weak.
 - Notes, not in the score: work mode, location and seniority mismatches against the
-  profile's preferences.
+  profile's preferences, only when both sides are stated.
 - Suggested priority: `high` for strong fits still in `saved`/`preparing` and less than
-  14 days old; `low` for weak fits; otherwise `normal`. It never overrides a priority the
-  user set.
+  14 days old; `low` for weak fits; otherwise `normal`; none without a score. It applies to
+  open, unarchived opportunities (`priority_set_by` = `suggested`, audit
+  `opportunity.priority_suggested`) and never overrides a priority the user set. Choosing a
+  priority counts as setting it; leaving the default `normal` on a new opportunity doesn't.
 
 Every assessment shows "Estimate based on your profile — not a prediction of the outcome."
 
+**Always current, no stale flag.** Computing a fit is cheap and deterministic, so every read
+recomputes it from the current requirements, profile and posting, and writes only if the
+result changed. Nothing can go stale: not after a deleted skill (which a timestamp comparison
+would miss), a stage move, or a strong fit passing 14 days. The board and list get scores the
+same way, through `Matching.Contracts.IFitScores`. Two reads racing to write the same result
+are harmless: the loser keeps its computed answer and the next read settles it.
+
+**Extraction.** `IRequirementExtractor` (spec 02 §6). The rule-based extractor reads section
+headings (English and Spanish), inline signals ("nice to have", "required", "5+ years") and
+catalog skills; alternatives ("Go or Python") become `nice`, because needing either isn't
+needing both. Without an API key it is what runs. With one, Claude does, and if that fails or
+is declined the rules run instead and the response says so (`fellBackToRules`). A model's row
+naming a skill the posting never mentions is dropped; output that fails validation is
+rejected whole.
+
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/opportunities/{id}/requirements` | |
-| PUT | `/opportunities/{id}/requirements` | Replace the list; marks all as `user`-confirmed |
-| POST | `/opportunities/{id}/requirements/extract` | Rules or AI; rate limit `ai` when AI |
-| GET | `/opportunities/{id}/fit` | Recomputes when stale |
+| GET | `/opportunities/{id}/requirements` | `{ items, extractor }`, where `extractor` is `rules` or `ai` |
+| PUT | `/opportunities/{id}/requirements` | `{ items: [{ text, kind, skill?, yearsMin? }] }` replaces the list; all become `user`-confirmed. Same skill twice → 422 |
+| POST | `/opportunities/{id}/requirements/extract` | Rules or AI; rate limit `ai` when AI. No posting text → 422 `requirements.no_posting` |
+| GET | `/opportunities/{id}/fit` | Computed on read |
 
-Event handlers: `ProfileChanged`, `RequirementsChanged` → mark assessments stale.
+Audit: `requirements.extracted`, `requirements.updated`.
 
 ## Contacts (F4)
 

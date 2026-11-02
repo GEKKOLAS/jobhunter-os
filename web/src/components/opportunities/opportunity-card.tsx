@@ -1,5 +1,6 @@
 "use client";
 
+import { FitChip } from "@/components/matching/fit-chip";
 import { StageSelect } from "@/components/opportunities/stage-select";
 import { Badge } from "@/components/ui/badge";
 import { ageLabel, PRIORITY_LABELS, WORK_MODE_LABELS } from "@/lib/opportunities";
@@ -41,9 +42,12 @@ export function OpportunityCard({
       </div>
       <p className="mt-0.5 truncate text-sm text-muted-foreground">{card.companyName}</p>
       {meta && <p className="truncate text-xs text-muted-foreground">{meta}</p>}
-      <div className="mt-2.5 flex items-center justify-between gap-2">
-        <span className="font-mono text-[11px] text-muted-foreground" title={card.appliedAt ? "Since you applied" : "Since you saved it"}>
-          {ageLabel(card.appliedAt ?? card.createdAt)}
+      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <FitChip score={card.fitScore} band={card.fitBand} />
+          <span className="font-mono text-[11px] text-muted-foreground" title={card.appliedAt ? "Since you applied" : "Since you saved it"}>
+            {ageLabel(card.appliedAt ?? card.createdAt)}
+          </span>
         </span>
         <StageSelect id={card.id} title={card.title} stage={card.stage} allowedMoves={card.allowedMoves} className="w-32" />
       </div>

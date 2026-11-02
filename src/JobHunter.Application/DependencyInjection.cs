@@ -1,6 +1,9 @@
 using FluentValidation;
 using JobHunter.Application.Identity;
+using JobHunter.Application.Matching;
+using JobHunter.Application.Matching.Contracts;
 using JobHunter.Application.Opportunities;
+using JobHunter.Application.Opportunities.Contracts;
 using JobHunter.Application.Opportunities.Imports;
 using JobHunter.Application.Profile;
 using JobHunter.Application.Profile.Contracts;
@@ -27,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ProfileHandler>();
         services.AddScoped<SkillsHandler>();
         services.AddScoped<EvidenceHandler>();
+        services.AddScoped<ICandidateFacts, CandidateFactsService>();
 
         // Opportunities
         services.AddScoped<CompanyResolver>();
@@ -35,6 +39,13 @@ public static class DependencyInjection
         services.AddScoped<BoardHandler>();
         services.AddScoped<ImportsHandler>();
         services.AddScoped<SourcesHandler>();
+        services.AddScoped<IOpportunityFacts, OpportunityFactsService>();
+
+        // Matching
+        services.AddScoped<RequirementsHandler>();
+        services.AddScoped<FitHandler>();
+        services.AddScoped<IFitScores>(sp => sp.GetRequiredService<FitHandler>());
+        services.AddSingleton<RuleBasedRequirementExtractor>();
 
         return services;
     }

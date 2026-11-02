@@ -10,7 +10,7 @@ typecheck and build pass, both themes are checked, and this file's status column
 | 2 | Profile & evidence (F1) | Done (2026-10-31) |
 | 3 | Opportunities: capture, board, history (F2) | Done (2026-10-31) |
 | 4 | Imports: text, URL, job-board sources (F2) | Done (2026-11-01) |
-| 5 | Matching (F3) | — |
+| 5 | Matching (F3) | Done (2026-11-02) |
 | 6 | Contacts (F4) | — |
 | 7 | Outbox + follow-ups, drafts, Outreach Studio (F5) | — |
 | 8 | Analytics + dashboard (F6, F7) | — |

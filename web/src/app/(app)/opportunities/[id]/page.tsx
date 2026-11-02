@@ -1,5 +1,7 @@
 "use client";
 
+import { FitPanel } from "@/components/matching/fit-panel";
+import { RequirementsCard } from "@/components/matching/requirements-card";
 import { OpportunityDialog } from "@/components/opportunities/opportunity-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -147,6 +149,9 @@ function Details({ opportunity: o }: { opportunity: Opportunity }) {
           </dl>
         </CardContent>
       </Card>
+
+      <FitPanel opportunity={o} />
+      <RequirementsCard opportunity={o} />
 
       {o.description && (
         <Card>

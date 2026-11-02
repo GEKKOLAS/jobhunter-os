@@ -10,6 +10,9 @@ public sealed class RateLimitingOptions
     /// <summary>Anything that calls out to another site on the user's behalf.</summary>
     public PolicyOptions Import { get; init; } = new() { PermitLimit = 60, WindowMinutes = 60 };
 
+    /// <summary>Calls that spend the Anthropic budget. Applies only when a key is configured.</summary>
+    public PolicyOptions Ai { get; init; } = new() { PermitLimit = 30, WindowMinutes = 60 };
+
     public sealed class PolicyOptions
     {
         public int PermitLimit { get; init; } = 10;

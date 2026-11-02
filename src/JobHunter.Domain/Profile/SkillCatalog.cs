@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace JobHunter.Domain.Profile;
 
 /// <summary>A skill the catalog knows: its key, display name, category, family and other names.</summary>
@@ -185,6 +187,66 @@ public static class SkillCatalog
             }
         }
         return index;
+    }
+
+    /// <summary>
+    /// Names that are also everyday words. They count as a mention only in this exact case, so
+    /// "React" is the framework and "react quickly" isn't. A null form is never a mention on its
+    /// own: "C" and "next" say too little, while "C++" and "Next.js" are their own entries.
+    /// </summary>
+    private static readonly Dictionary<string, string?> AmbiguousForms = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["c"] = null, ["next"] = null, ["nest"] = null, ["sh"] = null, ["py"] = null, ["es6"] = "ES6",
+        ["go"] = "Go", ["swift"] = "Swift", ["rust"] = "Rust", ["ruby"] = "Ruby", ["dart"] = "Dart",
+        ["express"] = "Express", ["spring"] = "Spring", ["react"] = "React", ["flask"] = "Flask",
+        ["rails"] = "Rails", ["expo"] = "Expo", ["helm"] = "Helm", ["jest"] = "Jest", ["cypress"] = "Cypress",
+        ["rabbit"] = "Rabbit", ["oracle"] = "Oracle", ["elastic"] = "Elastic", ["cosmos"] = "Cosmos", ["dynamo"] = "Dynamo",
+        ["lambda"] = "Lambda", ["node"] = "Node", ["dapper"] = "Dapper", ["maui"] = "MAUI", ["rest"] = "REST",
+        ["ml"] = "ML", ["ts"] = "TS", ["js"] = "JS", ["ef"] = "EF", ["rag"] = "RAG", ["eda"] = "EDA",
+    };
+
+    private static readonly Regex Mention = BuildMentionPattern();
+
+    private static Regex BuildMentionPattern()
+    {
+        var terms = All
+            .SelectMany(s => s.Aliases.Prepend(s.Name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(term => AmbiguousForms.TryGetValue(term, out var form) ? (Term: form, Exact: true) : (Term: term, Exact: false))
+            .Where(t => t.Term is not null)
+            // Longest first, so "React Native" wins over "React" and "SQL Server" over "SQL".
+            .OrderByDescending(t => t.Term!.Length)
+            .Select(t =>
+            {
+                var words = string.Join(@"[\s-]+", t.Term!.Split(' ').Select(Regex.Escape));
+                // "Go" alone is the language; "Go to market" isn't.
+                if (t.Term == "Go") words += @"(?!\s+to\b)";
+                return t.Exact ? $"(?-i:{words})" : words;
+            });
+
+        // A name stands alone: "C#/.NET" is two mentions and "Python-based" one; "non-Java" and "Reactive" are none.
+        return new Regex(
+            @"(?<![\p{L}\p{N}_+#.@-])(?:" + string.Join('|', terms) + @")(?![\p{L}\p{N}_+#]|-(?!based\b)|\.[\p{L}\p{N}])",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled,
+            TimeSpan.FromMilliseconds(250));
+    }
+
+    /// <summary>The known skills a piece of text names, in order, each once. Nothing when the text defeats the time limit.</summary>
+    public static IReadOnlyList<KnownSkill> MentionsIn(string text)
+    {
+        var found = new List<KnownSkill>();
+        try
+        {
+            foreach (Match match in Mention.Matches(text))
+            {
+                if (FindByCompact(SkillKey.Compact(match.Value)) is { } skill && !found.Contains(skill)) found.Add(skill);
+            }
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return [];
+        }
+        return found;
     }
 
     public static KnownSkill? FindByKey(string key) => All.FirstOrDefault(s => s.Key == key);

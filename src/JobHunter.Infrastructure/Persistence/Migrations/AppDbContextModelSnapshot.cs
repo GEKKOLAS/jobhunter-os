@@ -217,6 +217,135 @@ namespace JobHunter.Infrastructure.Persistence.Migrations
                     b.ToTable("user_sessions", (string)null);
                 });
 
+            modelBuilder.Entity("JobHunter.Domain.Matching.FitAssessment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AlgorithmVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("algorithm_version");
+
+                    b.Property<string>("Band")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("band");
+
+                    b.Property<DateTimeOffset>("ComputedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("computed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("MissingReason")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("missing_reason");
+
+                    b.Property<Guid>("OpportunityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opportunity_id");
+
+                    b.Property<int?>("Score")
+                        .HasColumnType("integer")
+                        .HasColumnName("score");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fit_assessments");
+
+                    b.HasIndex("OpportunityId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_fit_assessments_opportunity_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_fit_assessments_user_id");
+
+                    b.ToTable("fit_assessments", (string)null);
+                });
+
+            modelBuilder.Entity("JobHunter.Domain.Matching.OpportunityRequirement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Confirmed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("confirmed");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("OpportunityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opportunity_id");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("origin");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<string>("SkillKey")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("skill_key");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int?>("YearsMin")
+                        .HasColumnType("integer")
+                        .HasColumnName("years_min");
+
+                    b.HasKey("Id")
+                        .HasName("pk_opportunity_requirements");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_opportunity_requirements_user_id")
+                        .HasFilter("confirmed");
+
+                    b.HasIndex("OpportunityId", "Position")
+                        .HasDatabaseName("ix_opportunity_requirements_opportunity_id_position");
+
+                    b.ToTable("opportunity_requirements", (string)null);
+                });
+
             modelBuilder.Entity("JobHunter.Domain.Opportunities.Company", b =>
                 {
                     b.Property<Guid>("Id")
@@ -762,6 +891,117 @@ namespace JobHunter.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_user_sessions_users_user_id");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("JobHunter.Domain.Matching.FitAssessment", b =>
+                {
+                    b.HasOne("JobHunter.Domain.Opportunities.Opportunity", null)
+                        .WithMany()
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_fit_assessments_opportunities_opportunity_id");
+
+                    b.HasOne("JobHunter.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_fit_assessments_users_user_id");
+
+                    b.OwnsMany("JobHunter.Domain.Matching.FitNote", "Notes", b1 =>
+                        {
+                            b1.Property<Guid>("FitAssessmentId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Code")
+                                .IsRequired();
+
+                            b1.Property<string>("Posting")
+                                .IsRequired();
+
+                            b1.Property<string>("Profile")
+                                .IsRequired();
+
+                            b1.HasKey("FitAssessmentId", "__synthesizedOrdinal");
+
+                            b1.ToTable("fit_assessments");
+
+                            b1
+                                .ToJson("notes")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FitAssessmentId")
+                                .HasConstraintName("fk_fit_assessments_fit_assessments_fit_assessment_id");
+                        });
+
+                    b.OwnsMany("JobHunter.Domain.Matching.RequirementOutcome", "Outcomes", b1 =>
+                        {
+                            b1.Property<Guid>("FitAssessmentId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Coverage")
+                                .IsRequired();
+
+                            b1.Property<string>("Kind")
+                                .IsRequired();
+
+                            b1.Property<string>("Reason")
+                                .IsRequired();
+
+                            b1.Property<string>("RelatedSkill");
+
+                            b1.Property<string>("SkillKey");
+
+                            b1.Property<string>("SkillName");
+
+                            b1.Property<string>("Text")
+                                .IsRequired();
+
+                            b1.Property<int?>("YearsMin");
+
+                            b1.Property<int?>("YourLevel");
+
+                            b1.Property<double?>("YourYears");
+
+                            b1.HasKey("FitAssessmentId", "__synthesizedOrdinal");
+
+                            b1.ToTable("fit_assessments");
+
+                            b1
+                                .ToJson("outcomes")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FitAssessmentId")
+                                .HasConstraintName("fk_fit_assessments_fit_assessments_fit_assessment_id");
+                        });
+
+                    b.Navigation("Notes");
+
+                    b.Navigation("Outcomes");
+                });
+
+            modelBuilder.Entity("JobHunter.Domain.Matching.OpportunityRequirement", b =>
+                {
+                    b.HasOne("JobHunter.Domain.Opportunities.Opportunity", null)
+                        .WithMany()
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_requirements_opportunities_opportunity_id");
+
+                    b.HasOne("JobHunter.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_requirements_users_user_id");
                 });
 
             modelBuilder.Entity("JobHunter.Domain.Opportunities.Company", b =>

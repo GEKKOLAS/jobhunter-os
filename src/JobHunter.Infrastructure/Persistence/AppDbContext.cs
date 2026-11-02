@@ -1,7 +1,9 @@
 using JobHunter.Application.Identity;
+using JobHunter.Application.Matching;
 using JobHunter.Application.Opportunities;
 using JobHunter.Application.Profile;
 using JobHunter.Domain.Identity;
+using JobHunter.Domain.Matching;
 using JobHunter.Domain.Opportunities;
 using JobHunter.Domain.Profile;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +16,7 @@ namespace JobHunter.Infrastructure.Persistence;
 /// (spec 02 §3). Configurations are registered from this assembly.
 /// </summary>
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
-    : DbContext(options), IIdentityDbContext, IProfileDbContext, IOpportunitiesDbContext
+    : DbContext(options), IIdentityDbContext, IProfileDbContext, IOpportunitiesDbContext, IMatchingDbContext
 {
     // Identity
     public DbSet<User> Users => Set<User>();
@@ -32,6 +34,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OpportunityStageChange> OpportunityStageChanges => Set<OpportunityStageChange>();
     public DbSet<JobSource> JobSources => Set<JobSource>();
+
+    // Matching
+    public DbSet<OpportunityRequirement> OpportunityRequirements => Set<OpportunityRequirement>();
+    public DbSet<FitAssessment> FitAssessments => Set<FitAssessment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

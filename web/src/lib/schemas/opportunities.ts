@@ -1,3 +1,4 @@
+import { BANDS } from "@/lib/schemas/matching";
 import { z } from "zod";
 
 // The value sets of src/JobHunter.Domain/Opportunities/OpportunityVocabulary.cs.
@@ -39,6 +40,8 @@ export const opportunityCardSchema = z.object({
   updatedAt: z.string(),
   appliedAt: z.string().nullable(),
   archivedAt: z.string().nullable(),
+  fitScore: z.number().nullable(),
+  fitBand: z.enum(BANDS).nullable(),
 });
 export type OpportunityCard = z.infer<typeof opportunityCardSchema>;
 

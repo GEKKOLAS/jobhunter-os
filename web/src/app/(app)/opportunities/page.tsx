@@ -3,6 +3,7 @@
 import { PageHeader } from "@/components/app/page-header";
 import { OpportunityDialog } from "@/components/opportunities/opportunity-dialog";
 import { ToggleChip } from "@/components/profile/field";
+import { FitChip } from "@/components/matching/fit-chip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -132,6 +133,7 @@ function OpportunitiesList() {
                       {[o.companyName, o.location].filter(Boolean).join(" · ")}
                     </span>
                   </span>
+                  <FitChip score={o.fitScore} band={o.fitBand} />
                   {o.priority !== "normal" && (
                     <Badge variant={o.priority === "high" ? "warning" : "outline"}>{PRIORITY_LABELS[o.priority]}</Badge>
                   )}

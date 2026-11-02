@@ -1,5 +1,6 @@
 using FluentValidation;
 using JobHunter.Application.Common;
+using JobHunter.Application.Matching.Contracts;
 using JobHunter.Domain.Opportunities;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,11 +12,13 @@ public sealed class OpportunitiesHandler(
     IAuditWriter audit,
     IClock clock,
     CompanyResolver companies,
+    IFitScores fitScores,
     IValidator<OpportunityInput> inputValidator,
     IValidator<MoveStageCommand> moveValidator)
 {
     public async Task<Paged<OpportunityCardDto>> ListAsync(OpportunityListQuery query, CancellationToken ct)
     {
+        var fits = await fitScores.CurrentAsync(ct);
         var (page, pageSize) = Paged<OpportunityCardDto>.Clamp(query.Page, query.PageSize);
         var q = db.Opportunities.AsNoTracking()
             .Where(o => o.UserId == currentUser.UserId && (o.ArchivedAt != null) == query.Archived);
@@ -43,11 +46,14 @@ public sealed class OpportunitiesHandler(
             .ToListAsync(ct);
 
         return new Paged<OpportunityCardDto>(
-            rows.Select(r => OpportunityCardDto.From(r.Opportunity, r.CompanyName)).ToList(), page, pageSize, total);
+            rows.Select(r => OpportunityCardDto.From(r.Opportunity, r.CompanyName, fits.GetValueOrDefault(r.Opportunity.Id))).ToList(),
+            page, pageSize, total);
     }
 
     public async Task<OpportunityDto> GetAsync(Guid id, CancellationToken ct)
     {
+        // First: bringing the fits up to date can change a suggested priority, and with it the version the client edits.
+        await fitScores.CurrentAsync(ct);
         var opportunity = await FindAsync(id, ct, tracking: false);
         return OpportunityDto.From(opportunity, opportunity.Company!);
     }
@@ -184,7 +190,9 @@ public sealed class OpportunitiesHandler(
         o.SalaryPeriod = input.SalaryPeriod;
         o.SourceUrl = Trimmed(input.SourceUrl);
         o.Description = input.Description?.Trim() ?? "";
-        if (input.Priority is not null && (input.Priority != o.Priority || o.PrioritySetBy is null))
+        // Choosing one counts as setting it; sending back the value it already has doesn't, so a
+        // new opportunity left on the default and an edit that didn't touch it stay open to suggestions.
+        if (input.Priority is not null && input.Priority != o.Priority)
         {
             o.Priority = input.Priority;
             o.PrioritySetBy = OpportunityVocabulary.PrioritySetByUser;

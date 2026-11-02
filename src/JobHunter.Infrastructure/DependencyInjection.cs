@@ -1,9 +1,11 @@
 using JobHunter.Application.Common;
 using JobHunter.Application.Identity;
+using JobHunter.Application.Matching;
 using JobHunter.Application.Opportunities;
 using JobHunter.Application.Opportunities.Imports;
 using JobHunter.Application.Profile;
 using JobHunter.Infrastructure.Identity;
+using JobHunter.Infrastructure.Matching;
 using JobHunter.Infrastructure.Opportunities.Imports;
 using JobHunter.Infrastructure.Opportunities.JobBoards;
 using JobHunter.Infrastructure.Persistence;
@@ -44,8 +46,22 @@ public static class DependencyInjection
         services.AddScoped<IProfileDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IOpportunitiesDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         AddImports(services);
+        AddMatching(services);
 
         return services;
+    }
+
+    private static void AddMatching(IServiceCollection services)
+    {
+        services.AddScoped<IMatchingDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddOptions<AiOptions>().BindConfiguration(AiOptions.SectionName);
+
+        // With a key, Claude reads postings; without one, the rules do. Either way the user confirms.
+        services.AddHttpClient(AnthropicRequirementExtractor.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(90));
+        services.AddSingleton<AnthropicRequirementExtractor>();
+        services.AddSingleton<IRequirementExtractor>(sp => sp.GetRequiredService<IOptions<AiOptions>>().Value.IsConfigured
+            ? sp.GetRequiredService<AnthropicRequirementExtractor>()
+            : sp.GetRequiredService<RuleBasedRequirementExtractor>());
     }
 
     private static void AddImports(IServiceCollection services)

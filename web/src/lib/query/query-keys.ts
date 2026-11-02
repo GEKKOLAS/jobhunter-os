@@ -13,6 +13,8 @@ export const queryKeys = {
   opportunityList: (filters: object) => ["opportunities", "list", filters] as const,
   opportunity: (id: string) => ["opportunities", "detail", id] as const,
   history: (id: string) => ["opportunities", "history", id] as const,
+  requirements: (id: string) => ["opportunities", "requirements", id] as const,
+  fit: (id: string) => ["opportunities", "fit", id] as const,
   companies: ["companies"] as const,
   sources: ["sources"] as const,
   sourcePostings: (id: string) => ["sources", id, "postings"] as const,

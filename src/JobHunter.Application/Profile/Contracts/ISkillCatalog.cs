@@ -16,4 +16,7 @@ public interface ISkillCatalog
     CatalogSkill? Find(string key);
 
     IReadOnlyList<CatalogSkill> Search(string query, int limit);
+
+    /// <summary>The known skills a piece of text names, in order, each once.</summary>
+    IReadOnlyList<CatalogSkill> MentionsIn(string text);
 }

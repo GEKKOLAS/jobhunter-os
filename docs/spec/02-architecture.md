@@ -86,8 +86,8 @@ Modules react to each other through domain events, not direct calls:
 
 Examples: `OpportunityStageChanged → applied` creates a follow-up reminder (FollowUps);
 `InteractionLogged inbound` marks the application as responded (Opportunities) and closes
-open follow-up reminders for that contact (FollowUps); `ProfileChanged` and
-`RequirementsChanged` mark fit assessments stale (Matching).
+open follow-up reminders for that contact (FollowUps). Fit assessments need no event: they are
+recomputed on read (spec 03, Matching).
 
 ## 5. Security
 
@@ -117,12 +117,16 @@ Ported from Mail Template Hub, same rules:
 
 ## 6. AI
 
-Ports in Application, Anthropic implementations in Infrastructure, models from
-configuration (`Ai:Model`, `Ai:FastModel`).
+Ports in Application, Anthropic implementations in Infrastructure using the official
+`Anthropic` SDK, with the key (`Ai:ApiKey`, never in a file under version control) and the model
+(`Ai:Model`, default `claude-opus-5-5`) from configuration. Extraction runs at low effort with a
+JSON schema as its output format, and opts into server-side refusal fallbacks. Posting text is
+untrusted: it goes to the model as data inside delimiters, the model has no tools, and its
+answer can only be requirement rows, which still need the user's confirmation.
 
 | Port | Used for | Without an API key |
 |------|----------|--------------------|
-| `IRequirementExtractor` | Posting text → requirements (must/nice, skill, years) | `RuleBasedRequirementExtractor`: skill catalog + "N+ years" patterns, labelled `rules` |
+| `IRequirementExtractor` | Posting text → requirements (must/nice, skill, years) | `RuleBasedRequirementExtractor`: section headings, skill catalog + "N+ years" patterns, labelled `rules`. Also the fallback when an AI call fails |
 | `IPostingParser` | Imported page text → title, company, location, description | Heuristics from the page `<title>` and `JobPosting` JSON-LD when present (phase 4 ships these; an AI parser can replace them behind the port once the Anthropic client exists, in phase 5) |
 | `IDraftWriter` | Follow-up / thank-you drafts from facts the user selected | Unavailable; the UI offers a blank draft (a fake draft is worse than none) |
 

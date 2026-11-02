@@ -12,5 +12,8 @@ internal sealed class SkillCatalogService : ISkillCatalog
     public IReadOnlyList<CatalogSkill> Search(string query, int limit) =>
         SkillCatalog.Search(query, limit).Select(ToContract).ToList();
 
+    public IReadOnlyList<CatalogSkill> MentionsIn(string text) =>
+        SkillCatalog.MentionsIn(text).Select(ToContract).ToList();
+
     private static CatalogSkill ToContract(KnownSkill skill) => new(skill.Key, skill.Name, skill.Category, skill.Family);
 }

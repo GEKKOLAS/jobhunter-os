@@ -69,6 +69,10 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("auth", context => Fixed(context, o => o.Auth));
     options.AddPolicy("import", context => Fixed(context, o => o.Import));
+    // Without a key nothing spends a budget: the rules run locally.
+    options.AddPolicy("ai", context => context.RequestServices.GetRequiredService<IOptions<AiOptions>>().Value.IsConfigured
+        ? Fixed(context, o => o.Ai)
+        : RateLimitPartition.GetNoLimiter("no-ai"));
 });
 
 var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
