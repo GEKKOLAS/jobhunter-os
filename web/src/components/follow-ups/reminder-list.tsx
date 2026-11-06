@@ -70,7 +70,7 @@ export function ReminderList({ reminders, showSubject = true }: { reminders: Rem
                     )}
                   </p>
                 </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-1">
                   {r.origin === "rule" && <Badge variant="outline">Automatic</Badge>}
                   <Button variant="outline" size="sm" disabled={busy} onClick={() => done.mutate(r.id)}>
                     <Check />

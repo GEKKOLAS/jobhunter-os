@@ -17,7 +17,7 @@ export function AppNav({ user }: { user: User }) {
   const signOut = useSignOut();
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col gap-5 border-r border-sidebar-border bg-sidebar px-3 py-4 text-sidebar-foreground lg:flex">
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-5 self-start overflow-y-auto border-r border-sidebar-border bg-sidebar px-3 py-4 text-sidebar-foreground lg:flex">
       <Link href="/dashboard" className="rounded-xl px-2 py-1.5">
         <LogoMark />
       </Link>

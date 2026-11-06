@@ -115,7 +115,10 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
+        </div>
 
+        {/* What to chase, then what to start: the two lists that act on opportunities. */}
+        <div className="flex flex-col gap-6">
           {d && (
             <Card>
               <CardHeader>
@@ -151,49 +154,49 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
-        </div>
 
-        {d && (
-          <Card className="self-start">
-            <CardHeader>
-              <CardTitle>Next up</CardTitle>
-              <CardDescription>Not applied to yet: by priority, then fit, then the oldest.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {d.nextUp.total === 0 ? (
-                <p className="text-sm text-muted-foreground">Nothing saved or in preparation.</p>
-              ) : (
-                <ul className="divide-y">
-                  {d.nextUp.items.map((o) => (
-                    <li key={o.id} className="space-y-1 py-2">
-                      <Link href={`/opportunities/${o.id}`} className="block text-sm font-medium break-words hover:underline">
-                        {o.title}
-                      </Link>
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                        <span>{o.companyName}</span>
-                        <span aria-hidden>·</span>
-                        <span>{STAGE_LABELS[o.stage]}</span>
-                        {o.priority === "high" && <Badge variant="secondary">High priority</Badge>}
-                        {o.priority === "low" && <Badge variant="outline">Low priority</Badge>}
-                        {o.band && o.score !== null && (
-                          <Badge variant={BAND_BADGES[o.band]}>
-                            {BAND_LABELS[o.band]} · {o.score}
-                          </Badge>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {d.nextUp.total > d.nextUp.items.length && (
-                <p className="pt-2 text-xs text-muted-foreground">
-                  And {d.nextUp.total - d.nextUp.items.length} more on the{" "}
-                  <Link href="/board" className="text-link hover:underline">board</Link>.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+          {d && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Next up</CardTitle>
+                <CardDescription>Not applied to yet: by priority, then fit, then the oldest.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {d.nextUp.total === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nothing saved or in preparation.</p>
+                ) : (
+                  <ul className="divide-y">
+                    {d.nextUp.items.map((o) => (
+                      <li key={o.id} className="space-y-1 py-2">
+                        <Link href={`/opportunities/${o.id}`} className="block text-sm font-medium break-words hover:underline">
+                          {o.title}
+                        </Link>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                          <span>{o.companyName}</span>
+                          <span aria-hidden>·</span>
+                          <span>{STAGE_LABELS[o.stage]}</span>
+                          {o.priority === "high" && <Badge variant="secondary">High priority</Badge>}
+                          {o.priority === "low" && <Badge variant="outline">Low priority</Badge>}
+                          {o.band && o.score !== null && (
+                            <Badge variant={BAND_BADGES[o.band]}>
+                              {BAND_LABELS[o.band]} · {o.score}
+                            </Badge>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {d.nextUp.total > d.nextUp.items.length && (
+                  <p className="pt-2 text-xs text-muted-foreground">
+                    And {d.nextUp.total - d.nextUp.items.length} more on the{" "}
+                    <Link href="/board" className="text-link hover:underline">board</Link>.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       <Link href="/analytics" className="inline-flex items-center gap-1 self-start text-sm text-link hover:underline">
