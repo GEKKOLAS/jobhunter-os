@@ -1,3 +1,4 @@
+using JobHunter.Application.Analytics;
 using JobHunter.Application.Contacts;
 using JobHunter.Application.FollowUps;
 using JobHunter.Application.Identity;
@@ -23,7 +24,8 @@ namespace JobHunter.Infrastructure.Persistence;
 /// (spec 02 §3). Configurations are registered from this assembly.
 /// </summary>
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
-    : DbContext(options), IIdentityDbContext, IProfileDbContext, IOpportunitiesDbContext, IMatchingDbContext, IContactsDbContext, IFollowUpsDbContext, IIntegrationsDbContext
+    : DbContext(options), IIdentityDbContext, IProfileDbContext, IOpportunitiesDbContext, IMatchingDbContext, IContactsDbContext,
+        IFollowUpsDbContext, IIntegrationsDbContext, IAnalyticsDbContext
 {
     // Identity
     public DbSet<User> Users => Set<User>();
@@ -62,6 +64,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     // Module events (spec 02 §4)
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<InboxReceipt> InboxReceipts => Set<InboxReceipt>();
+
+    // Analytics reads the other modules' tables, untracked, so it can't write (spec 02 §3).
+    IQueryable<Opportunity> IAnalyticsDbContext.Opportunities => Opportunities.AsNoTracking();
+    IQueryable<OpportunityStageChange> IAnalyticsDbContext.OpportunityStageChanges => OpportunityStageChanges.AsNoTracking();
+    IQueryable<CandidateProfile> IAnalyticsDbContext.Profiles => Profiles.AsNoTracking();
+    IQueryable<ProfileSkill> IAnalyticsDbContext.ProfileSkills => ProfileSkills.AsNoTracking();
+    IQueryable<OpportunityRequirement> IAnalyticsDbContext.OpportunityRequirements => OpportunityRequirements.AsNoTracking();
+    IQueryable<FitAssessment> IAnalyticsDbContext.FitAssessments => FitAssessments.AsNoTracking();
+    IQueryable<Reminder> IAnalyticsDbContext.Reminders => Reminders.AsNoTracking();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

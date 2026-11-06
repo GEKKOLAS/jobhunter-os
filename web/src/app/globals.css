@@ -33,6 +33,9 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-viz-sent: var(--viz-sent);
+  --color-viz-answered: var(--viz-answered);
+  --color-viz-grid: var(--viz-grid);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -111,6 +114,10 @@
   --chart-3: #ff7a45;
   --chart-4: #9fd8ff;
   --chart-5: #ff9ed2;
+  /* Analytics marks, checked with the dataviz palette validator against the card (#ffffff). */
+  --viz-sent: #6a4ff0;
+  --viz-answered: #e8590c;
+  --viz-grid: #e4e1ee;
   --radius: 0.625rem;
   --sidebar: #111111;
   --sidebar-foreground: #ffffff;
@@ -161,6 +168,10 @@
   --chart-3: #f08d63;
   --chart-4: #2dd4bf;
   --chart-5: #f87171;
+  /* Analytics marks, checked against the dark card (#13131b): their own steps, not a flip. */
+  --viz-sent: #866cf2;
+  --viz-answered: #dc6a36;
+  --viz-grid: rgb(255 255 255 / 8%);
   --sidebar: #0e0e14;
   --sidebar-foreground: #ededf3;
   --sidebar-primary: #9b87ff;

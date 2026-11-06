@@ -20,11 +20,14 @@ export function ReminderDialog({
   reminder,
   opportunityId,
   contactId,
+  initial,
   onClose,
 }: {
   reminder?: Reminder;
   opportunityId?: string;
   contactId?: string;
+  /** What a new reminder starts with, when the place it's made from knows (the dashboard's "Remind me"). */
+  initial?: { title: string; kind: ReminderKind };
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -32,8 +35,8 @@ export function ReminderDialog({
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(9, 0, 0, 0);
 
-  const [title, setTitle] = useState(reminder?.title ?? "");
-  const [kind, setKind] = useState<ReminderKind>(reminder?.kind ?? "custom");
+  const [title, setTitle] = useState(reminder?.title ?? initial?.title ?? "");
+  const [kind, setKind] = useState<ReminderKind>(reminder?.kind ?? initial?.kind ?? "custom");
   const [dueAt, setDueAt] = useState(toLocalInput(reminder ? new Date(reminder.dueAt) : tomorrow));
   const [errors, setErrors] = useState<FormErrors>(NO_ERRORS);
 

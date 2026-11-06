@@ -8,7 +8,7 @@ It is phase 2 of a career toolkit. Phase 1, **Outreach Studio**
 ([Mail Template Hub](https://github.com/GEKKOLAS/smtp)), builds and sends email. JobHunter OS
 calls its API to send follow-ups, and only after you approve each one.
 
-> **Status: phases 0–7 done.** Accounts work end to end (sign-up, sign-in, sessions you can see
+> **Status: phases 0–8 done.** Accounts work end to end (sign-up, sign-in, sessions you can see
 > and revoke, password reset, a security activity log). So does F1, your profile: skills from a
 > 128-entry catalog that folds aliases (`C#` = `csharp`), and the evidence behind them. And so
 > does F2: bring opportunities in by hand, from pasted text, from a link (through an SSRF guard)
@@ -19,8 +19,11 @@ calls its API to send follow-ups, and only after you approve each one.
 > reasons. F4 keeps the people in your search, what links them to each opportunity and what was
 > said. F5 reminds you to follow up (applying adds one, a reply closes it), drafts the email
 > (blank, or written by Claude from facts you give it and checked before you see it), and sends it
-> through Outreach Studio only once you've approved it. Analytics arrive in phase 8; see the
-> [implementation plan](docs/spec/04-implementation-plan.md).
+> through Outreach Studio only once you've approved it. F6 counts how your applications are
+> doing (answer, interview and offer rates with their sample sizes, "too few to say" under
+> five, by week, source and target role) and which skills postings ask for and you lack. F7,
+> the dashboard, shows what's due today, what has gone quiet and what to work on next. Phase 9
+> is the launch; see the [implementation plan](docs/spec/04-implementation-plan.md).
 
 ## What it will do
 

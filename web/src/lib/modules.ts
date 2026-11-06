@@ -21,8 +21,8 @@ export const PHASES = [
   { phase: 5, title: "Matching", status: "done" },
   { phase: 6, title: "Contacts", status: "done" },
   { phase: 7, title: "Follow-ups and Outreach Studio", status: "done" },
-  { phase: 8, title: "Analytics and dashboard", status: "next" },
-  { phase: 9, title: "Launch", status: "planned" },
+  { phase: 8, title: "Analytics and dashboard", status: "done" },
+  { phase: 9, title: "Launch", status: "next" },
 ] as const;
 
 export type PhaseStatus = (typeof PHASES)[number]["status"];
@@ -117,6 +117,9 @@ export const MODULES: AppModule[] = [
 ];
 
 export const MODULE_GROUPS: ModuleGroup[] = ["Pipeline", "People", "You"];
+
+/** The phone tab bar (below `lg`). The dashboard links to every other area there. */
+export const MOBILE_TAB_SLUGS = ["dashboard", "board", "follow-ups", "profile"];
 
 export function findModule(slug: string) {
   return MODULES.find((m) => m.slug === slug);

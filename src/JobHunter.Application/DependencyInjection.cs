@@ -1,4 +1,5 @@
 using FluentValidation;
+using JobHunter.Application.Analytics;
 using JobHunter.Application.Common;
 using JobHunter.Application.Contacts;
 using JobHunter.Application.Contacts.Contracts;
@@ -78,6 +79,10 @@ public static class DependencyInjection
         services.AddScoped<FitHandler>();
         services.AddScoped<IFitScores>(sp => sp.GetRequiredService<FitHandler>());
         services.AddSingleton<RuleBasedRequirementExtractor>();
+
+        // Analytics
+        services.AddScoped<AnalyticsHandler>();
+        services.AddScoped<DashboardHandler>();
 
         return services;
     }

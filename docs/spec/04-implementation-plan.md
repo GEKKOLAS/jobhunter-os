@@ -13,7 +13,7 @@ typecheck and build pass, both themes are checked, and this file's status column
 | 5 | Matching (F3) | Done (2026-11-02) |
 | 6 | Contacts (F4) | Done (2026-11-02) |
 | 7 | Outbox + follow-ups, drafts, Outreach Studio (F5) | Done (2026-11-05) |
-| 8 | Analytics + dashboard (F6, F7) | — |
+| 8 | Analytics + dashboard (F6, F7) | Done (2026-11-05) |
 | 9 | Launch: Docker images, deploy, screenshots, case study | — |
 
 ## Phase 0 — Foundation
@@ -80,14 +80,19 @@ real `smtp` instance verified manually), approval flow UI.
 
 ## Phase 8 — Analytics and dashboard
 
-Summary/skills/dashboard queries with tests for every definition in spec 03, `/analytics`
-and the dashboard page.
+Summary/skills/dashboard queries as pure functions over rows (a unit test per definition in
+spec 03) behind a read-only port, integration tests for the queries, isolation and refusals;
+`/analytics` (range in the URL, rates with their sample sizes, a weekly chart with a table
+view) and the dashboard page, which also links every area on phones. Chart colors are checked
+with a palette validator in both themes. Any change in the app marks analytics stale, so the
+dashboard follows reminders and moves without a reload.
 
 ## Phase 9 — Launch
 
 Container images for API and web, production configuration and secrets, deploy target,
 OpenTelemetry exporter, README screenshots in both themes, and a case-study write-up
-(problem, architecture, decisions, results — real numbers only).
+(problem, architecture, decisions, results — real numbers only). The API image needs time
+zone data (tzdata): weekly analytics take the viewer's IANA zone.
 
 ## Testing strategy
 

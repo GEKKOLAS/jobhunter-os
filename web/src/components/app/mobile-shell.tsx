@@ -3,7 +3,7 @@
 import { LogoMark } from "@/components/app/logo-mark";
 import { UserAvatar } from "@/components/app/user-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { findModule, isActivePath } from "@/lib/modules";
+import { findModule, isActivePath, MOBILE_TAB_SLUGS } from "@/lib/modules";
 import type { User } from "@/lib/schemas/auth";
 import { UnreadBadge } from "@/components/follow-ups/unread-badge";
 import Link from "next/link";
@@ -12,7 +12,7 @@ import { usePathname } from "next/navigation";
 // The phone shell (below `lg`): a slim top bar and four thumb-reachable tabs for what you
 // do on the move: check today, move a card, answer a reminder, fix your profile.
 // The dashboard lists every other area; the avatar opens Settings (and sign-out).
-const TABS = ["dashboard", "board", "follow-ups", "profile"].map((slug) => findModule(slug)!);
+const TABS = MOBILE_TAB_SLUGS.map((slug) => findModule(slug)!);
 
 export function MobileTopBar({ user }: { user: User }) {
   return (

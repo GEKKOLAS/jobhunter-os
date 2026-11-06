@@ -18,6 +18,15 @@ public sealed class ReminderRules(IFollowUpsDbContext db, IClock clock, IOptions
 
     public async Task HandleAsync(OpportunityStageChanged e, CancellationToken ct)
     {
+        // A move that records their answer (screening, a rejection…) ends the chase the apply rule started.
+        // Only that rule's reminder: a follow-up the user added themselves is theirs to close.
+        if (e.FirstResponseAt is not null)
+        {
+            var chase = await db.Reminders.FirstOrDefaultAsync(r => r.UserId == e.UserId && r.OpportunityId == e.OpportunityId
+                && r.RuleKey == FollowUpVocabulary.RuleAfterApply && r.Status == FollowUpVocabulary.Open, ct);
+            chase?.Complete(clock.UtcNow);
+        }
+
         if (e.ToStage == Applied && e.FirstResponseAt is null)
         {
             await AddOnceAsync(e, FollowUpVocabulary.RuleAfterApply, FollowUpVocabulary.FollowUp,

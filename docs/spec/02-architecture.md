@@ -54,7 +54,9 @@ Each module owns a namespace in every layer (`JobHunter.Domain.Opportunities`,
 `JobHunter.Application.B.Contracts` (interfaces and DTOs B chooses to expose) and B's domain
 events (`JobHunter.Domain.B.Events`). It never touches B's entities, use cases or
 `DbSet`s. The one exception is `Analytics`, which only reads: it may query other modules'
-entities, but not call their use cases. Architecture tests enforce this in Domain and
+entities, but not call their use cases. Its port, `IAnalyticsDbContext`, exposes untracked
+`IQueryable`s only, so it never writes; the fits it reads are first brought up to date through
+Matching's `IFitScores` contract, as the board does. Architecture tests enforce this in Domain and
 Application, where the business rules live. Infrastructure is where every module's
 adapters meet (EF configurations, jobs), so it is exempt. A second test fails when a
 namespace appears that is neither a declared module nor the shared kernel, so a new module

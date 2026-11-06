@@ -31,4 +31,9 @@ export const queryKeys = {
   aiCapabilities: ["ai", "capabilities"] as const,
   sources: ["sources"] as const,
   sourcePostings: (id: string) => ["sources", id, "postings"] as const,
+  /** Everything computed from the rest; the query client marks it stale after any change. */
+  analytics: ["analytics"] as const,
+  analyticsSummary: (days: number, tz: string) => ["analytics", "summary", days, tz] as const,
+  analyticsSkills: (days: number) => ["analytics", "skills", days] as const,
+  dashboard: ["analytics", "dashboard"] as const,
 };

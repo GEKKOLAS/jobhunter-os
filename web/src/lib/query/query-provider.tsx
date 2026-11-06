@@ -1,12 +1,17 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { ApiError } from "@/lib/api/client";
+import { queryKeys } from "@/lib/query/query-keys";
 
 function makeQueryClient() {
-  return new QueryClient({
+  const client: QueryClient = new QueryClient({
+    mutationCache: new MutationCache({
+      // Analytics and the dashboard are computed from everything, so any change can move them.
+      onSuccess: () => void client.invalidateQueries({ queryKey: queryKeys.analytics }),
+    }),
     defaultOptions: {
       queries: {
         staleTime: 30_000,
@@ -18,6 +23,7 @@ function makeQueryClient() {
       },
     },
   });
+  return client;
 }
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {

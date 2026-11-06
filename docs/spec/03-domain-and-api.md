@@ -289,6 +289,8 @@ Rules v1, as event handlers (spec 02 §4). They take the user from the event, ne
   `FollowUps:AfterApplyDays` (default 7) later, unless it already has a response. Rule key
   `after_apply`.
 - Reaching `interviewing` → a `thank_you` reminder the next day. Rule key `after_interview`.
+- A move that records an answer (the event's `FirstResponseAt` is set: screening onwards, or a
+  rejection) → the open `after_apply` reminder is done. Follow-ups the user added stay open.
 - An inbound interaction about an opportunity applied to before it → that opportunity's
   `first_response_at`, if it has none. And open `follow_up` reminders for that opportunity or
   that contact are done: they answered.
@@ -350,20 +352,75 @@ Audit: `outreach.configured|tested|removed`.
 
 ## Analytics (F6, F7)
 
-Read-only queries over the user's data. A rate is `null` when its denominator is below 5,
-and every rate is returned with its numerator and denominator.
+Read-only queries over the user's own data; no tables of their own. Archived opportunities
+are left out everywhere: archiving is how a user deletes one. Each query computes from rows,
+so a number can always be traced back to the opportunities behind it.
+
+**Rates.** Every rate is `{ numerator, denominator, value }`. `value` is `null` when the
+denominator is below 5, and the UI then shows "too few to say (3 of 4)" instead of a
+percentage (PRD principle 1). The same rule holds for the median below.
+
+**The range** is `days` = 30, 90 or 365 (default 90; anything else → 422
+`analytics.invalid_range`), the last that many days up to now: `from = now − days`. Applications are counted by when they were sent, so a
+range's numbers include answers that arrived after it for applications sent inside it.
 
 | Metric | Definition |
 |--------|------------|
-| Applications | Opportunities with `applied_at` in the range |
-| Response rate | Applications with `first_response_at` ÷ applications |
-| Interview rate | Applications that reached `interviewing` ÷ applications |
-| Offer rate | Applications that reached `offer` ÷ applications |
-| Time to first response | Median days `applied_at → first_response_at`, responded ones only |
-| No response | Applied ≥ 30 days ago with no response (shown, not assumed `no_response`) |
+| Saved | Opportunities captured (`created_at`) in the range. A count without a rate: what was applied to in the range may have been saved before it |
+| Applications | Opportunities with `applied_at` in the range: the cohort for everything below |
+| Response rate | Applications with `first_response_at` ÷ applications. A rejection counts as an answer (Opportunities, timestamps) |
+| Interview rate | Applications that reached interviewing ÷ applications |
+| Offer rate | Applications that reached offer ÷ applications |
+| Time to first response | Median of `first_response_at − applied_at` in days (one decimal), responded applications only; `null` under 5 of them |
+| No response | Applications sent at least 30 days ago without an answer ÷ applications sent at least 30 days ago. Shown as a fact, never turned into `no_response` |
+
+**Reached** a stage means the history has a move to it or to a later step: interviewing is
+`interviewing`, `offer`, `accepted` or `declined`; offer is `offer`, `accepted` or `declined`.
+A one-step correction doesn't undo it, the same as `applied_at` and `first_response_at`.
+
+**Funnel**: saved, applied, responded, interviewing, offer, with the counts above. Only the
+steps from applied on are one cohort, so responded, interviewing and offer have rates, each
+over applications.
+
+**Weekly series**: for every week that overlaps the range, oldest first and including empty
+weeks, the applications sent and the answers received (`first_response_at`, whatever the
+application's date), counting only moments inside the range. Weeks start on Monday in the
+viewer's time zone, `tz` (an IANA name, default `UTC`; unknown → 422
+`analytics.unknown_time_zone`). A week the range cuts is flagged `partial`.
+
+**By source**: each source with at least one application, most applications first:
+applications, responses and interviews, with the response and interview rates. **By target
+role**: each of the profile's target roles in its order, then "other" when anything is left.
+An application belongs to the first target role whose every word appears in its title
+(case- and accent-insensitive; words are runs of letters and digits), so the rows add up to
+the applications. Same columns as by source. Roles with no applications are listed, since
+that is worth knowing.
+
+**Skills** (`/analytics/skills`): over opportunities captured in the range, using **confirmed
+requirements only** (nothing a parser guessed counts, as in Matching):
+
+- *Most requested*: skill keys by how many postings ask for them (must and nice counted
+  apart), with `postings` (how many had at least one confirmed requirement with a skill),
+  the catalog name (the key itself for skills the catalog doesn't know) and whether the
+  profile has the skill. Top 15, ties by name.
+- *Most frequent gaps*: skill keys whose current fit outcome is `gap` (the profile has neither
+  the skill nor a related one), by how many postings. The fits are brought up to date first,
+  as on the board. Top 10.
+
+**Dashboard** (`/dashboard`):
+
+| Part | Definition |
+|------|------------|
+| Gone quiet | Opportunities at `applied` with no answer, sent at least 10 days ago, with no open reminder on them. Oldest first, up to 10, plus the total |
+| Next up | Open opportunities at `saved` or `preparing`, by priority (high first), then fit score (none last), then oldest. Up to 5, plus the total |
+| Pipeline | Count per stage, all eleven |
+
+Due and overdue reminders aren't repeated here: the page lists them with
+`GET /reminders?status=open&until=` (the end of the viewer's day), so done and snooze work
+the same as on the Follow-ups page.
 
 | Method | Path | Returns |
 |--------|------|---------|
-| GET | `/analytics/summary?days=30|90|365` | Totals, funnel, weekly series, by source, by target role |
-| GET | `/analytics/skills?days=` | Most requested skill keys in saved postings; most frequent gaps |
-| GET | `/dashboard` | Due/overdue reminders, stale applications (applied, no response, ≥ 10 days, no open reminder), top-priority open opportunities, counts per stage |
+| GET | `/analytics/summary?days&tz` | `{ days, from, to, saved, applications, rates: { response, interview, offer, noResponse }, timeToFirstResponse: { medianDays, count }, funnel, weekly, bySource, byRole }` |
+| GET | `/analytics/skills?days` | `{ days, postings, requested: [{ key, name, postings, must, nice, inProfile }], gaps: [{ key, name, postings, must, nice }] }` |
+| GET | `/dashboard` | `{ quiet: { items, total }, nextUp: { items, total }, stages }` |

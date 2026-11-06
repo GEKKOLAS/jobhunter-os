@@ -92,9 +92,10 @@ public class FollowUpsTests(ApiFactory factory)
         var session = await factory.SignedInAsync();
         var id = await OpportunityAsync(session, stage: "applied");
 
-        // Forward and back by a one-step correction: two more "reached applied" events.
-        await session.PostAsync($"/api/v1/opportunities/{id}/stage", new { stage = "screening" });
-        await session.PostAsync($"/api/v1/opportunities/{id}/stage", new { stage = "applied" });
+        // Back by a one-step correction and forward again: another "reached applied" event, and no
+        // answer on the way (screening would record one, which closes the follow-up instead).
+        Assert.True((await session.PostAsync($"/api/v1/opportunities/{id}/stage", new { stage = "preparing" })).IsSuccessStatusCode);
+        Assert.True((await session.PostAsync($"/api/v1/opportunities/{id}/stage", new { stage = "applied" })).IsSuccessStatusCode);
         await DispatchAsync();
 
         Assert.Single(await RemindersAsync(session));
@@ -129,6 +130,28 @@ public class FollowUpsTests(ApiFactory factory)
         Assert.NotEqual(JsonValueKind.Null, opportunity.GetProperty("firstResponseAt").ValueKind);
         Assert.Empty(await RemindersAsync(session));
         Assert.Single(await RemindersAsync(session, "?status=done"));
+    }
+
+    [Fact]
+    public async Task A_move_that_records_their_answer_closes_the_apply_follow_up_but_not_one_you_added()
+    {
+        var session = await factory.SignedInAsync();
+        var id = await OpportunityAsync(session, stage: "applied");
+        await DispatchAsync();
+        var mine = await session.PostAsync("/api/v1/reminders", new
+        {
+            title = "Ask about the team", dueAt = DateTimeOffset.UtcNow.AddDays(3), kind = "follow_up", opportunityId = id,
+        });
+        Assert.Equal(HttpStatusCode.Created, mine.StatusCode);
+        Assert.Equal(2, (await RemindersAsync(session)).Count);
+
+        await session.PostAsync($"/api/v1/opportunities/{id}/stage", new { stage = "screening" });
+        await DispatchAsync();
+
+        var open = Assert.Single(await RemindersAsync(session));
+        Assert.Equal("Ask about the team", open.GetProperty("title").GetString());
+        var done = Assert.Single(await RemindersAsync(session, "?status=done"));
+        Assert.Equal("rule", done.GetProperty("origin").GetString());
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using JobHunter.Application.Analytics;
 using JobHunter.Application.Common;
 using JobHunter.Application.Contacts;
 using JobHunter.Application.FollowUps;
@@ -54,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<IProfileDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IOpportunitiesDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IContactsDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IAnalyticsDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         AddImports(services);
         AddMatching(services);
         AddFollowUps(services);
