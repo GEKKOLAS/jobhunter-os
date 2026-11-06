@@ -1,16 +1,22 @@
 using JobHunter.Application.Common;
 using JobHunter.Application.Contacts;
+using JobHunter.Application.FollowUps;
 using JobHunter.Application.Identity;
+using JobHunter.Application.Integrations;
 using JobHunter.Application.Matching;
 using JobHunter.Application.Opportunities;
 using JobHunter.Application.Opportunities.Imports;
 using JobHunter.Application.Profile;
+using JobHunter.Infrastructure.FollowUps;
 using JobHunter.Infrastructure.Identity;
+using JobHunter.Infrastructure.Integrations;
 using JobHunter.Infrastructure.Matching;
 using JobHunter.Infrastructure.Opportunities.Imports;
 using JobHunter.Infrastructure.Opportunities.JobBoards;
+using JobHunter.Infrastructure.Outbox;
 using JobHunter.Infrastructure.Persistence;
 using JobHunter.Infrastructure.Persistence.Interceptors;
+using JobHunter.Infrastructure.Security;
 using JobHunter.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +39,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<TimestampInterceptor>();
+        services.AddSingleton<OutboxInterceptor>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
@@ -40,7 +47,7 @@ public static class DependencyInjection
             options
                 .UseNpgsql(database.ConnectionString)
                 .UseSnakeCaseNamingConvention()
-                .AddInterceptors(sp.GetRequiredService<TimestampInterceptor>());
+                .AddInterceptors(sp.GetRequiredService<TimestampInterceptor>(), sp.GetRequiredService<OutboxInterceptor>());
         });
 
         AddIdentity(services, configuration);
@@ -49,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IContactsDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         AddImports(services);
         AddMatching(services);
+        AddFollowUps(services);
 
         return services;
     }
@@ -64,6 +72,33 @@ public static class DependencyInjection
         services.AddSingleton<IRequirementExtractor>(sp => sp.GetRequiredService<IOptions<AiOptions>>().Value.IsConfigured
             ? sp.GetRequiredService<AnthropicRequirementExtractor>()
             : sp.GetRequiredService<RuleBasedRequirementExtractor>());
+    }
+
+    private static void AddFollowUps(IServiceCollection services)
+    {
+        services.AddScoped<IFollowUpsDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IIntegrationsDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddOptions<FollowUpsOptions>().BindConfiguration(FollowUpsOptions.SectionName);
+
+        // Module events: written by the interceptor, delivered by the worker (spec 02 §4).
+        services.AddSingleton<OutboxDispatcher>();
+        services.AddOptions<WorkerOptions>().BindConfiguration(WorkerOptions.SectionName);
+        services.AddHostedService<BackgroundWorker>();
+
+        services.AddOptions<SecretsOptions>().BindConfiguration(SecretsOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+        services.AddSingleton<ISecretCipher, AesGcmSecretCipher>();
+
+        // The base URL is the user's, so it goes through the guarded connector like page imports.
+        services.AddOptions<OutreachOptions>().BindConfiguration(OutreachOptions.SectionName);
+        services.AddHttpClient(OutreachStudioClient.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15))
+            .ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<GuardedConnector>()
+                .CreateHandler(sp.GetRequiredService<IOptions<OutreachOptions>>().Value.AllowPrivateNetwork));
+        services.AddSingleton<IOutreachClient, OutreachStudioClient>();
+
+        services.AddSingleton<AnthropicDraftWriter>();
+        services.AddSingleton<IDraftWriter>(sp => sp.GetRequiredService<IOptions<AiOptions>>().Value.IsConfigured
+            ? sp.GetRequiredService<AnthropicDraftWriter>()
+            : new UnavailableDraftWriter());
     }
 
     private static void AddImports(IServiceCollection services)

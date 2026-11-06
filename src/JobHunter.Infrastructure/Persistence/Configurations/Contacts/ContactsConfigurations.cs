@@ -58,6 +58,8 @@ internal sealed class InteractionConfiguration : IEntityTypeConfiguration<Intera
         builder.Property(i => i.Channel).HasMaxLength(20).IsRequired();
         builder.Property(i => i.Direction).HasMaxLength(10).IsRequired();
         builder.Property(i => i.Summary).HasMaxLength(ContactVocabulary.MaxSummary).IsRequired();
+        builder.Property(i => i.OutreachSendId).HasMaxLength(100);
+        builder.Ignore(i => i.DomainEvents);
 
         builder.HasIndex(i => new { i.ContactId, i.OccurredAt });
         builder.HasIndex(i => new { i.OpportunityId, i.OccurredAt }).HasFilter("opportunity_id IS NOT NULL");

@@ -5,6 +5,7 @@ import { UserAvatar } from "@/components/app/user-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { findModule, isActivePath } from "@/lib/modules";
 import type { User } from "@/lib/schemas/auth";
+import { UnreadBadge } from "@/components/follow-ups/unread-badge";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -50,11 +51,12 @@ export function MobileTabBar() {
             }`}
           >
             <span
-              className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${
+              className={`relative flex h-8 w-14 items-center justify-center rounded-full transition-colors ${
                 active ? "bg-primary text-primary-foreground dark:bg-muted dark:text-link" : ""
               }`}
             >
               <Icon className="size-5" strokeWidth={2.25} />
+              {tab.slug === "follow-ups" && <UnreadBadge className="absolute -top-1 right-1" />}
             </span>
             {tab.label}
           </Link>

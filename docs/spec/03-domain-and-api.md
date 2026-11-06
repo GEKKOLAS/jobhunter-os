@@ -280,44 +280,73 @@ as responded; moving it to a responding stage does.
 
 `reminders`: `title` ≤ 160, `due_at`, `opportunity_id?`, `contact_id?`, `kind`
 (`follow_up|thank_you|prep|custom`), `status` (`open|done|dismissed`), `snoozed_until?`,
-`origin` (`user|rule`), `rule_key?` (unique with the opportunity, so a rule fires once).
+`origin` (`user|rule`), `rule_key?` (unique with the opportunity, so a rule fires once),
+`notified_at?`, `version`. A reminder is due at `snoozed_until ?? due_at`.
 
-Rules v1 (from events): moved to `applied` → follow-up in `FollowUps:AfterApplyDays`
-(default 7) unless a response already exists; moved to `interviewing` → thank-you
-reminder the next day; inbound interaction → close open `follow_up` reminders for the same
-opportunity.
+Rules v1, as event handlers (spec 02 §4). They take the user from the event, never from a request:
+
+- An opportunity reaching `applied`, moved there or added there → a `follow_up` reminder
+  `FollowUps:AfterApplyDays` (default 7) later, unless it already has a response. Rule key
+  `after_apply`.
+- Reaching `interviewing` → a `thank_you` reminder the next day. Rule key `after_interview`.
+- An inbound interaction about an opportunity applied to before it → that opportunity's
+  `first_response_at`, if it has none. And open `follow_up` reminders for that opportunity or
+  that contact are done: they answered.
+
+`notifications`: in-app only. The due-reminders worker (every 5 minutes) creates one when an
+open reminder becomes due, once per due time (`notified_at`, which snoozing or rescheduling
+clears).
 
 `drafts`: `kind` (`follow_up|thank_you|outreach`), `opportunity_id?`, `contact_id?`,
-`to_email?`, `subject` ≤ 200, `body` ≤ 10,000 (plain text), `origin` (`ai|user`),
-`status` (`draft|approved|sent|discarded`), `sent_via?` (`outreach_studio|manual`),
-`outreach_send_id?`, `sent_at?`. Status moves: draft → approved → sent; approved → draft
-on edit; any → discarded.
+`to_email?` (the contact's email by default), `subject` ≤ 200, `body` ≤ 10,000 (plain text),
+`origin` (`ai|user`), `status` (`draft|approved|sent|discarded`), `approved_at?`, `sent_via?`
+(`outreach_studio|manual`), `outreach_send_id?`, `sent_at?`, `version`. Moves: draft →
+approved → sent; editing an approved draft returns it to draft; draft or approved →
+discarded. Sent and discarded are final (an edit → 409 `draft.closed`). Approving needs a
+subject and a body.
 
-`notifications`: in-app only in v1, created by `DueRemindersJob` (every 15 min) for
-reminders that became due.
+**Writing a draft.** `IDraftWriter` (spec 02 §6) gets only the kind, the opportunity's title
+and company, the contact's name and role, the user's display name, and the facts the user
+picked (≤ 8, ≤ 300 characters each). Its answer is checked before anyone sees it, and any
+failure means a blank draft with a note saying so, never a repaired one:
+
+- no number, month or weekday that isn't in the input;
+- no catalog skill, and none of the user's other companies, that isn't in the input;
+- every `{{placeholder}}` in the input appears in the output, and no new ones do;
+- a subject ≤ 200 and a body ≤ 4,000 characters.
+
+**Sending.** Only an approved draft with a recipient, and only on that click, through Outreach
+Studio (spec 02 §7) with `Idempotency-Key: jobhunter-draft-{id}`, so a retried send can't go
+out twice. Success records the send id and, when the draft has a contact, logs an outbound
+email interaction carrying it (`interactions.outreach_send_id`). Without a connection the
+user copies the draft and marks it sent, which logs the same interaction with
+`sent_via: manual`.
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET / POST | `/reminders?status&due=today|overdue|week` | |
-| PUT / DELETE | `/reminders/{id}` · POST `/reminders/{id}/done` · POST `/reminders/{id}/snooze` | |
-| GET / POST | `/drafts` | POST `{ kind, opportunityId?, contactId?, generate: bool, facts? }` |
-| PUT / DELETE | `/drafts/{id}` | Editing an approved draft returns it to `draft` |
-| POST | `/drafts/{id}/approve` | |
-| POST | `/drafts/{id}/send` | Approved only (409 `draft.not_approved`); needs a recipient email and Outreach Studio configured (409 `outreach.not_configured`); logs an outbound interaction |
-| POST | `/drafts/{id}/mark-sent` | Manual channel; logs an outbound interaction |
-| GET | `/notifications` · POST `/notifications/read` | |
+| GET / POST | `/reminders?status&until&opportunityId&contactId` | `until`: due at or before it (the client knows where the viewer's day ends). Soonest first. POST makes a `user` reminder; an opportunity or contact that isn't the user's → 422 |
+| PUT / DELETE | `/reminders/{id}` | PUT `{ title, dueAt, kind, version }`; DELETE dismisses |
+| POST | `/reminders/{id}/done` · `/reminders/{id}/snooze` | Snooze `{ until }`, in the future (422) |
+| GET / POST | `/drafts?status&opportunityId&contactId` | POST `{ kind, opportunityId?, contactId?, generate, facts? }` → 201 with `generated`, and `generationNote` when it couldn't |
+| PUT / DELETE | `/drafts/{id}` | PUT `{ toEmail, subject, body, version }`; DELETE discards |
+| POST | `/drafts/{id}/approve` | No subject or body → 422 |
+| POST | `/drafts/{id}/send` | 409 `draft.not_approved`, 422 `draft.no_recipient`, 409 `outreach.not_configured`, 409 `outreach.no_mailbox`; Outreach Studio refusing → 422 `outreach.rejected` with its message, failing → 502 `outreach.unavailable`. Rate limit `import` |
+| POST | `/drafts/{id}/mark-sent` | From draft or approved: the user sent it themselves |
+| GET | `/notifications` · POST `/notifications/read` | Newest 50 and the unread count; POST `{ ids? }`, none meaning all |
 
-Audit: `draft.approved`, `draft.sent`, `reminder.created` (user), `reminder.done`.
+Audit: `reminder.created|updated|done|snoozed|dismissed` (user actions), `draft.created|approved|sent|discarded`.
 
 ## Integrations
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/integrations/outreach` | `{ configured, baseUrl, templateVersionId, lastTestedAt, lastTestOk }` — never the key |
-| PUT | `/integrations/outreach` | `{ baseUrl, apiKey?, templateVersionId }`; key encrypted at rest |
-| POST | `/integrations/outreach/test` | Calls Outreach Studio `GET /api/v1/me` |
+| GET | `/integrations/outreach` | `{ configured, baseUrl, templateVersionId, keyHint, lastTestedAt, lastTestOk }`. Never the key: `keyHint` is its last 4 characters |
+| PUT | `/integrations/outreach` | `{ baseUrl, apiKey?, templateVersionId }`. The key is needed the first time and kept when omitted; encrypted at rest |
+| POST | `/integrations/outreach/test` | Calls `GET /api/v1/me`: `{ ok, displayName?, hasDefaultMailbox, message? }`. Rate limit `import` |
 | DELETE | `/integrations/outreach` | |
 | GET | `/ai/capabilities` | `{ extraction: "ai"|"rules", drafts: bool }` |
+
+Audit: `outreach.configured|tested|removed`.
 
 ## Analytics (F6, F7)
 

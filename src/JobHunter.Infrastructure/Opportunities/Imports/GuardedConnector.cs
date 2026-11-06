@@ -27,14 +27,17 @@ public sealed class BlockedAddressException(string host)
 /// </summary>
 public sealed class GuardedConnector(IHostResolver resolver)
 {
-    public async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, CancellationToken cancellationToken)
+    public ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, CancellationToken cancellationToken) =>
+        ConnectAsync(context, allowPrivateNetwork: false, cancellationToken);
+
+    private async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, bool allowPrivateNetwork, CancellationToken cancellationToken)
     {
         var host = context.DnsEndPoint.Host;
         var addresses = IPAddress.TryParse(host, out var literal)
             ? [literal]
             : await resolver.ResolveAsync(host, cancellationToken);
 
-        if (addresses.Length == 0 || addresses.Any(a => !SsrfGuard.IsPublic(a)))
+        if (addresses.Length == 0 || (!allowPrivateNetwork && addresses.Any(a => !SsrfGuard.IsPublic(a))))
         {
             throw new BlockedAddressException(host);
         }
@@ -52,14 +55,18 @@ public sealed class GuardedConnector(IHostResolver resolver)
         }
     }
 
-    /// <summary>The primary handler for page imports: no cookies, no automatic redirects, this connector.</summary>
-    public SocketsHttpHandler CreateHandler() => new()
+    /// <summary>
+    /// The primary handler for any user-supplied address: no cookies, no automatic redirects, this
+    /// connector. <paramref name="allowPrivateNetwork"/> is for development only, where a user's
+    /// own service (Outreach Studio) runs on localhost.
+    /// </summary>
+    public SocketsHttpHandler CreateHandler(bool allowPrivateNetwork = false) => new()
     {
         AllowAutoRedirect = false,
         UseCookies = false,
         UseProxy = false,
         AutomaticDecompression = DecompressionMethods.All,
         PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-        ConnectCallback = ConnectAsync,
+        ConnectCallback = (context, ct) => ConnectAsync(context, allowPrivateNetwork, ct),
     };
 }

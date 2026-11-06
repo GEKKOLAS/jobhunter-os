@@ -1,10 +1,13 @@
 using JobHunter.Domain.Common;
+using JobHunter.Domain.Opportunities.Events;
 
 namespace JobHunter.Domain.Opportunities;
 
 /// <summary>One job the user is considering or pursuing, with where it stands in the pipeline.</summary>
-public sealed class Opportunity : IHasTimestamps
+public sealed class Opportunity : IHasTimestamps, IHasDomainEvents
 {
+    private readonly List<IDomainEvent> _events = [];
+
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public required Guid UserId { get; init; }
     public required Guid CompanyId { get; set; }
@@ -47,6 +50,21 @@ public sealed class Opportunity : IHasTimestamps
 
     public Company? Company { get; init; }
 
+    public IReadOnlyList<IDomainEvent> DomainEvents => _events;
+
+    public void ClearDomainEvents() => _events.Clear();
+
+    /// <summary>
+    /// Records that they answered, at the time they did. Only an answer after applying counts,
+    /// and only the first: false when nothing changed.
+    /// </summary>
+    public bool RecordResponse(DateTimeOffset at)
+    {
+        if (AppliedAt is null || FirstResponseAt is not null || at < AppliedAt) return false;
+        FirstResponseAt = at;
+        return true;
+    }
+
     /// <summary>Puts a new opportunity at its first stage (any open one: you may log a job you already applied to).</summary>
     public OpportunityStageChange Start(string stage, DateTimeOffset now)
     {
@@ -72,6 +90,7 @@ public sealed class Opportunity : IHasTimestamps
 
         PreviousStage = from;
         Stage = stage;
+        _events.Add(new OpportunityStageChanged(Id, UserId, Title, from, stage, FirstResponseAt, now));
         return new OpportunityStageChange
         {
             OpportunityId = Id,

@@ -1,13 +1,18 @@
 using JobHunter.Application.Contacts;
+using JobHunter.Application.FollowUps;
 using JobHunter.Application.Identity;
+using JobHunter.Application.Integrations;
 using JobHunter.Application.Matching;
 using JobHunter.Application.Opportunities;
 using JobHunter.Application.Profile;
 using JobHunter.Domain.Contacts;
+using JobHunter.Domain.FollowUps;
 using JobHunter.Domain.Identity;
+using JobHunter.Domain.Integrations;
 using JobHunter.Domain.Matching;
 using JobHunter.Domain.Opportunities;
 using JobHunter.Domain.Profile;
+using JobHunter.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobHunter.Infrastructure.Persistence;
@@ -18,7 +23,7 @@ namespace JobHunter.Infrastructure.Persistence;
 /// (spec 02 §3). Configurations are registered from this assembly.
 /// </summary>
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
-    : DbContext(options), IIdentityDbContext, IProfileDbContext, IOpportunitiesDbContext, IMatchingDbContext, IContactsDbContext
+    : DbContext(options), IIdentityDbContext, IProfileDbContext, IOpportunitiesDbContext, IMatchingDbContext, IContactsDbContext, IFollowUpsDbContext, IIntegrationsDbContext
 {
     // Identity
     public DbSet<User> Users => Set<User>();
@@ -45,6 +50,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<ContactOpportunity> ContactOpportunities => Set<ContactOpportunity>();
     public DbSet<Interaction> Interactions => Set<Interaction>();
+
+    // FollowUps
+    public DbSet<Reminder> Reminders => Set<Reminder>();
+    public DbSet<Draft> Drafts => Set<Draft>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+
+    // Integrations
+    public DbSet<OutreachConnection> OutreachConnections => Set<OutreachConnection>();
+
+    // Module events (spec 02 §4)
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<InboxReceipt> InboxReceipts => Set<InboxReceipt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

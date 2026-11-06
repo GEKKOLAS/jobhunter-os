@@ -15,4 +15,7 @@ public interface ICompanyDirectory
 
     /// <summary>Companies whose name contains the term, for searches that include the company.</summary>
     Task<IReadOnlyList<Guid>> MatchingAsync(string term, CancellationToken ct);
+
+    /// <summary>Every company name the user has, for checking that a draft names no company it wasn't given.</summary>
+    Task<IReadOnlyList<string>> AllNamesAsync(CancellationToken ct);
 }

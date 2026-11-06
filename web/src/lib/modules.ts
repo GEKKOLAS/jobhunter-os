@@ -20,8 +20,8 @@ export const PHASES = [
   { phase: 4, title: "Imports: text, URL, job boards", status: "done" },
   { phase: 5, title: "Matching", status: "done" },
   { phase: 6, title: "Contacts", status: "done" },
-  { phase: 7, title: "Follow-ups and Outreach Studio", status: "next" },
-  { phase: 8, title: "Analytics and dashboard", status: "planned" },
+  { phase: 7, title: "Follow-ups and Outreach Studio", status: "done" },
+  { phase: 8, title: "Analytics and dashboard", status: "next" },
   { phase: 9, title: "Launch", status: "planned" },
 ] as const;
 

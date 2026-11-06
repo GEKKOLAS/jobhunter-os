@@ -1,6 +1,7 @@
 "use client";
 
 import { PeopleCard } from "@/components/contacts/people-card";
+import { OpportunityFollowUpsCard } from "@/components/follow-ups/opportunity-follow-ups-card";
 import { FitPanel } from "@/components/matching/fit-panel";
 import { RequirementsCard } from "@/components/matching/requirements-card";
 import { OpportunityDialog } from "@/components/opportunities/opportunity-dialog";
@@ -154,6 +155,7 @@ function Details({ opportunity: o }: { opportunity: Opportunity }) {
       <FitPanel opportunity={o} />
       <RequirementsCard opportunity={o} />
       <PeopleCard opportunity={o} />
+      <OpportunityFollowUpsCard opportunity={o} />
 
       {o.description && (
         <Card>

@@ -34,7 +34,7 @@ PRD ──▶ Architecture ──▶ Domain + API contracts ──▶ Implementa
 | Backend | ASP.NET Core on .NET 10, Clean Architecture (`JobHunter.Domain/Application/Infrastructure/Api`) | Same stack as Mail Template Hub |
 | Shape | Modular monolith: modules as namespaces, cross-module access only through `Contracts`, enforced by architecture tests | The ecosystem plan: extract services only when there is a real need |
 | Database | PostgreSQL 16, EF Core 10, snake_case | `jsonb`, `text[]`, `xmin` concurrency, `SKIP LOCKED` |
-| Async work | Hangfire on PostgreSQL + a transactional outbox for module events | No extra broker until one is needed; events survive crashes |
+| Async work | A transactional outbox for module events, run by a background worker in the API | No extra broker or job server until one is needed; events survive crashes |
 | Identity | Own accounts: cookie sessions, Argon2id, double-submit CSRF (ported from Mail Template Hub) | No JWT in the browser; proven in phase 1 |
 | Frontend | Next.js 16 App Router, TypeScript strict, Tailwind 4, shadcn/ui, TanStack Query, Zod | Same as phase 1; `/api` proxied for first-party cookies |
 | Design | The ecosystem's two themes: **Mailroom** (light) and **Nocturne** (dark) | One visual language across the toolkit |

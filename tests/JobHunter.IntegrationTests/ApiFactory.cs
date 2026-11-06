@@ -1,4 +1,5 @@
 using JobHunter.Application.Identity;
+using JobHunter.Infrastructure.Integrations;
 using JobHunter.Infrastructure.Matching;
 using JobHunter.Infrastructure.Opportunities.JobBoards;
 using Microsoft.AspNetCore.Hosting;
@@ -23,6 +24,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         .WithPassword("jh_test_password")
         .Build();
 
+    /// <summary>A key-encryption key for tests only; the API refuses the development one outside Development.</summary>
+    public const string TestSecretKey = "Q2xhdWRlIHRlc3Qga2V5IGZvciBKb2JIdW50ZXIgT1M=";
+
     public RecordingResetNotifier ResetLinks { get; } = new();
 
     /// <summary>Every outside site, as far as the API can tell.</summary>
@@ -41,6 +45,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("RateLimiting:Auth:PermitLimit", "100000");
         builder.UseSetting("RateLimiting:Import:PermitLimit", "100000");
         builder.UseSetting("RateLimiting:Ai:PermitLimit", "100000");
+        // Tests run the background passes themselves, so nothing happens behind their back.
+        builder.UseSetting("Workers:Enabled", "false");
+        builder.UseSetting("Secrets:Keys:1", TestSecretKey);
+        builder.UseSetting("Secrets:ActiveVersion", "1");
 
         builder.ConfigureServices(services =>
         {
@@ -52,6 +60,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddHttpClient(JobBoardClient.HttpClientName)
                 .ConfigurePrimaryHttpMessageHandler(() => Outside);
             services.AddHttpClient(AnthropicRequirementExtractor.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => Outside);
+            services.AddHttpClient(OutreachStudioClient.HttpClientName)
                 .ConfigurePrimaryHttpMessageHandler(() => Outside);
         });
     }

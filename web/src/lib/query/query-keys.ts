@@ -22,6 +22,13 @@ export const queryKeys = {
   contact: (id: string) => ["contacts", "detail", id] as const,
   interactions: (id: string) => ["contacts", "interactions", id] as const,
   people: (opportunityId: string) => ["contacts", "people", opportunityId] as const,
+  reminders: ["reminders"] as const,
+  reminderList: (filters: object) => ["reminders", "list", filters] as const,
+  drafts: ["drafts"] as const,
+  draftList: (filters: object) => ["drafts", "list", filters] as const,
+  notifications: ["notifications"] as const,
+  outreach: ["integrations", "outreach"] as const,
+  aiCapabilities: ["ai", "capabilities"] as const,
   sources: ["sources"] as const,
   sourcePostings: (id: string) => ["sources", id, "postings"] as const,
 };

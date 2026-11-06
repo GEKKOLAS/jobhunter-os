@@ -1,4 +1,5 @@
 using JobHunter.Domain.Common;
+using JobHunter.Domain.Contacts.Events;
 
 namespace JobHunter.Domain.Contacts;
 
@@ -42,8 +43,10 @@ public sealed class ContactOpportunity : IHasTimestamps
 }
 
 /// <summary>One conversation that happened. A log entry: it's added or removed, never edited.</summary>
-public sealed class Interaction : IHasTimestamps
+public sealed class Interaction : IHasTimestamps, IHasDomainEvents
 {
+    private readonly List<IDomainEvent> _events = [];
+
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public required Guid UserId { get; init; }
     public required Guid ContactId { get; init; }
@@ -58,6 +61,33 @@ public sealed class Interaction : IHasTimestamps
     public required DateTimeOffset OccurredAt { get; init; }
     public required string Summary { get; init; }
 
+    /// <summary>The Outreach Studio send it records, when it was sent from a draft there.</summary>
+    public string? OutreachSendId { get; init; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+
+    public IReadOnlyList<IDomainEvent> DomainEvents => _events;
+
+    public void ClearDomainEvents() => _events.Clear();
+
+    /// <summary>A new entry in the log, announced to the modules that react to conversations.</summary>
+    public static Interaction Log(
+        Guid userId, Guid contactId, Guid? opportunityId, string channel, string direction,
+        DateTimeOffset occurredAt, string summary, string? outreachSendId = null)
+    {
+        var interaction = new Interaction
+        {
+            UserId = userId,
+            ContactId = contactId,
+            OpportunityId = opportunityId,
+            Channel = channel,
+            Direction = direction,
+            OccurredAt = occurredAt,
+            Summary = summary,
+            OutreachSendId = outreachSendId,
+        };
+        interaction._events.Add(new InteractionLogged(interaction.Id, userId, contactId, opportunityId, channel, direction, occurredAt));
+        return interaction;
+    }
 }

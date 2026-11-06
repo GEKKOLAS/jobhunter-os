@@ -12,7 +12,12 @@ public sealed class StubHttp : HttpMessageHandler
 {
     private readonly ConcurrentDictionary<string, Func<HttpResponseMessage>> _routes = new();
 
+    public sealed record Captured(string Method, string Url, IReadOnlyDictionary<string, string> Headers, string? Body);
+
     public ConcurrentQueue<string> Requested { get; } = new();
+
+    /// <summary>Every request in full, for asserting on headers and bodies (an idempotency key, a bearer token).</summary>
+    public ConcurrentQueue<Captured> Requests { get; } = new();
 
     public void On(string url, string body, string contentType = "text/html", HttpStatusCode status = HttpStatusCode.OK) =>
         _routes[url] = () => new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, contentType) };
@@ -24,11 +29,18 @@ public sealed class StubHttp : HttpMessageHandler
 
     public bool WasRequested(string url) => Requested.Contains(url);
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    public IReadOnlyList<Captured> RequestsTo(string url) => Requests.Where(r => r.Url == url).ToList();
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         // Fragments never reach a server.
         var url = request.RequestUri!.GetLeftPart(UriPartial.Query);
         Requested.Enqueue(url);
-        return Task.FromResult(_routes.TryGetValue(url, out var respond) ? respond() : new HttpResponseMessage(HttpStatusCode.NotFound));
+
+        var headers = request.Headers.ToDictionary(h => h.Key, h => string.Join(',', h.Value), StringComparer.OrdinalIgnoreCase);
+        var body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+        Requests.Enqueue(new Captured(request.Method.Method, url, headers, body));
+
+        return _routes.TryGetValue(url, out var respond) ? respond() : new HttpResponseMessage(HttpStatusCode.NotFound);
     }
 }

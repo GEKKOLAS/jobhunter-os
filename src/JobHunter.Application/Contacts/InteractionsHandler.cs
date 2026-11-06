@@ -76,16 +76,8 @@ public sealed class InteractionsHandler(
             title = facts.Title;
         }
 
-        var interaction = new Interaction
-        {
-            UserId = currentUser.UserId,
-            ContactId = contactId,
-            OpportunityId = input.OpportunityId,
-            Channel = input.Channel,
-            Direction = input.Direction,
-            OccurredAt = input.OccurredAt,
-            Summary = input.Summary.Trim(),
-        };
+        var interaction = Interaction.Log(
+            currentUser.UserId, contactId, input.OpportunityId, input.Channel, input.Direction, input.OccurredAt, input.Summary.Trim());
         db.Interactions.Add(interaction);
 
         // Never the summary: the audit log is about what the user did, not what someone else said.

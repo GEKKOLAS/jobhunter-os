@@ -7,6 +7,7 @@ import { useSignOut } from "@/lib/hooks/use-sign-out";
 import { isActivePath, MODULE_GROUPS, MODULES } from "@/lib/modules";
 import type { User } from "@/lib/schemas/auth";
 import { LogOut } from "lucide-react";
+import { UnreadBadge } from "@/components/follow-ups/unread-badge";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -43,6 +44,7 @@ export function AppNav({ user }: { user: User }) {
                 >
                   <Icon className={`size-4 shrink-0 ${active ? "text-sidebar-icon" : ""}`} strokeWidth={2.25} />
                   {m.label}
+                  {m.slug === "follow-ups" && <UnreadBadge className="ml-auto" />}
                 </Link>
               );
             })}

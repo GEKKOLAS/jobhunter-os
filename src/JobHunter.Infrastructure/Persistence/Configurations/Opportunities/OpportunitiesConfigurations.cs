@@ -47,6 +47,7 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
         builder.Property(o => o.Priority).HasMaxLength(10).IsRequired();
         builder.Property(o => o.PrioritySetBy).HasMaxLength(10);
         builder.Property(o => o.Version).IsRowVersion();
+        builder.Ignore(o => o.DomainEvents);
 
         // The board and the default lists: a user's unarchived opportunities by stage.
         builder.HasIndex(o => new { o.UserId, o.Stage }).HasFilter("archived_at IS NULL");

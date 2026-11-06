@@ -20,6 +20,14 @@ internal sealed class CompanyDirectoryService(IOpportunitiesDbContext db, ICurre
             .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
     }
 
+    public async Task<IReadOnlyList<string>> AllNamesAsync(CancellationToken ct) =>
+        await db.Companies.AsNoTracking()
+            .Where(c => c.UserId == currentUser.UserId)
+            .OrderBy(c => c.Name)
+            .Select(c => c.Name)
+            .Take(1000)
+            .ToListAsync(ct);
+
     public async Task<IReadOnlyList<Guid>> MatchingAsync(string term, CancellationToken ct)
     {
         var lowered = term.Trim().ToLower();

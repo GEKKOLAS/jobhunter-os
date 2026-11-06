@@ -4,7 +4,7 @@
 
 ```
  Browser ──▶ Next.js (web, :3100) ──/api proxy──▶ JobHunter.Api (:5101) ──▶ PostgreSQL (:5433)
-                                                        │   └─ Hangfire worker (same process)
+                                                        │   └─ background worker (same process)
                                                         ├──▶ Anthropic API         (extraction, drafts)
                                                         ├──▶ Greenhouse / Lever / Ashby public job-board APIs
                                                         ├──▶ Posting URLs           (user-initiated import)
@@ -21,7 +21,7 @@ JobHunter.slnx
 src/
   JobHunter.Domain/          entities, value objects, domain events — no dependencies
   JobHunter.Application/     use cases per module, ports (interfaces), contracts
-  JobHunter.Infrastructure/  EF Core, Hangfire, outbox, AI, HTTP clients, crypto
+  JobHunter.Infrastructure/  EF Core, outbox and background worker, AI, HTTP clients, crypto
   JobHunter.Api/             controllers, auth handlers, middleware, composition root
 tests/
   JobHunter.UnitTests/
@@ -78,11 +78,17 @@ Modules react to each other through domain events, not direct calls:
 - An aggregate raises an event (e.g. `OpportunityStageChanged`, `InteractionLogged`).
 - On `SaveChanges`, an interceptor serializes pending events into `outbox_messages` in the
   **same transaction** as the state change.
-- `DispatchOutboxJob` (Hangfire, every 10 s) claims batches with `FOR UPDATE SKIP LOCKED`,
-  invokes the handlers, and marks rows processed. Failures back off and retry; after 10
-  attempts a row is parked with its error and shown on an admin endpoint.
+- A background worker in the API process (every 10 s) claims one message at a time with
+  `FOR UPDATE SKIP LOCKED`, so several instances never take the same one, runs its handlers
+  and marks it processed, all in one transaction. Failures back off (30 s doubling, up to an
+  hour) and retry; after 10 attempts a message is parked with its error, logged as an error,
+  and `/healthz` reports Degraded until someone looks. Processed messages are deleted after
+  30 days.
 - Delivery is at-least-once. Handlers are idempotent: each records the message id it
   processed in `inbox_receipts (message_id, handler)`, and a duplicate is skipped.
+- Why not Hangfire, as first planned: the outbox table already gives persistence, retries
+  and parking. A job server would add a second scheduler and its own schema for two timers.
+  The same worker runs the due-reminders pass every 5 minutes.
 
 Examples: `OpportunityStageChanged → applied` creates a follow-up reminder (FollowUps);
 `InteractionLogged inbound` marks the application as responded (Opportunities) and closes
@@ -99,8 +105,11 @@ Ported from Mail Template Hub, same rules:
 - **Ownership:** every user-owned table has `user_id`; queries filter by the current user,
   and a resource owned by someone else is a 404, never a 403.
 - **Secrets at rest:** the Outreach Studio API key is encrypted with AES-256-GCM using a
-  per-row data key wrapped by a versioned key-encryption key from configuration (the same
-  envelope scheme as Mail Template Hub's OAuth tokens). It is write-only through the API.
+  per-row data key wrapped by a versioned key-encryption key from configuration
+  (`Secrets:Keys:{version}`, `Secrets:ActiveVersion`; the same envelope scheme as Mail Template
+  Hub's OAuth tokens), with the row's id as associated data so a ciphertext copied to another
+  row fails. It is write-only through the API. Development has a key in its settings file,
+  which the API refuses to start with anywhere else.
 - **URL import (SSRF):** `https` only (and `http` when `Imports:AllowHttp` is set, in
   development); ports 80/443 only; no credentials in the URL; names like `localhost`, `*.local`
   and `*.internal` refused outright. The host is resolved **while connecting**, inside the HTTP
@@ -138,10 +147,14 @@ output that fails validation is rejected, not repaired. The fit score is compute
 ## 7. Integrations
 
 - **Outreach Studio.** Settings stores the base URL, the API key (encrypted) and the id of
-  a plain template version with `{{subject}}`/`{{body}}` variables. Sending a draft calls
-  `POST /api/v1/sends` on Outreach Studio with the user's default connected mailbox and
-  records the returned send id. "Test connection" calls `GET /api/v1/me`. When not
-  configured, drafts are copied and marked as sent manually.
+  a plain template version with `{{subject}}`/`{{body}}` variables. Sending a draft reads the
+  user's default connected mailbox from `GET /api/v1/me` (`defaultAccountId`), then calls
+  `POST /api/v1/sends` with `Authorization: Bearer mth_…` and an `Idempotency-Key`, and records
+  the returned send id. "Test connection" calls `GET /api/v1/me`. When not configured, drafts
+  are copied and marked as sent manually. The base URL is user-supplied, so it goes through the
+  SSRF guard's connector: https and public addresses only, unless
+  `Integrations:Outreach:AllowPrivateNetwork` is set (Development, where Outreach Studio runs
+  on `http://localhost:5001`). Calls time out after 15 s.
 - **Job boards.** Greenhouse (`boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true`),
   Lever (`api.lever.co/v0/postings/{company}?mode=json`) and Ashby
   (`api.ashbyhq.com/posting-api/job-board/{name}`) are public APIs companies publish for
@@ -150,7 +163,8 @@ output that fails validation is rejected, not repaired. The fit score is compute
 
 ## 8. Observability and operations
 
-Serilog structured logs; OpenTelemetry traces for HTTP in/out, EF Core and Hangfire jobs,
-exported over OTLP when `OpenTelemetry:OtlpEndpoint` is set. `/healthz` checks the
-database. Migrations run at startup in development and tests only
-(`Database:ApplyMigrationsOnStartup`); production applies them in the deploy pipeline.
+Serilog structured logs; OpenTelemetry traces for HTTP in/out and EF Core (the worker's
+queries included), exported over OTLP when `OpenTelemetry:OtlpEndpoint` is set. `/healthz`
+checks the database and the outbox (Degraded while a message is parked). Migrations run at
+startup in development and tests only (`Database:ApplyMigrationsOnStartup`); production
+applies them in the deploy pipeline.

@@ -6,7 +6,9 @@ using JobHunter.Api.Middleware;
 using JobHunter.Application;
 using JobHunter.Application.Common;
 using JobHunter.Infrastructure;
+using JobHunter.Infrastructure.Outbox;
 using JobHunter.Infrastructure.Persistence;
+using JobHunter.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +32,8 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AppDbContext>("database");
+    .AddDbContextCheck<AppDbContext>("database")
+    .AddCheck<OutboxHealthCheck>("outbox");
 
 // --- Identity: cookie sessions + CSRF (spec 02 §5) ---
 builder.Services.AddHttpContextAccessor();
@@ -90,6 +93,13 @@ builder.Services.AddOpenTelemetry()
     });
 
 var app = builder.Build();
+
+// A key that sits in the repository protects nothing outside a developer's machine.
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing")
+    && app.Services.GetRequiredService<IOptions<SecretsOptions>>().Value.UsesDevelopmentKey)
+{
+    throw new InvalidOperationException("Secrets:Keys holds the development key. Configure a real one for this environment.");
+}
 
 // Outermost, so the log shows the status the client really got, not an exception passing through.
 app.UseSerilogRequestLogging();
